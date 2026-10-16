@@ -60,6 +60,9 @@ In *Citadel of Legends*, your castle operates as a living medieval engine where 
 | **Basalt Wall** | $1 \times 1$ | 4 Stone | Impassable defensive wall blocking enemy pathfinding. |
 | **Fortified Watchtower** | $1 \times 1$ | 30 Stone, 5 Iron | High-durability bastion ($1400\text{ HP}$) providing defensive vantage. |
 | **Castle Gatehouse** | $2 \times 1$ | 25 Wood, 50 Stone | Heavy portcullis allowing friendly passage while blocking foes. |
+| **Cathedral of Light** *(Solaris)* | $2 \times 2$ | 80 Wood, 60 Stone, 20 Iron | Holy sanctuary generating $+4\text{ Honor/sec}$. |
+| **Glacial Runestone** *(Frost)* | $2 \times 2$ | 60 Wood, 80 Stone, 20 Iron | Mystic megalith generating $+4\text{ Honor/sec}$. |
+| **Blood Crucible** *(Obsidian)* | $2 \times 2$ | 70 Wood, 50 Stone, 25 Pitch | Sanguine monolith generating $+4\text{ Honor/sec}$. |
 | **Dragon Roost Dais** | $2 \times 2$ | 100 Wood, 120 Stone, 40 Iron, 35 Honor | Ancient arcane aerie to summon your Faction Dragon. |
 
 ---
@@ -67,15 +70,18 @@ In *Citadel of Legends*, your castle operates as a living medieval engine where 
 ## 3. Military Units & Tactical Counters
 
 | Unit | Role | Cost | HP / ATK / Range | Counters | Countered By |
-| :--- | :--- | :--- | :---: | :--- | :--- |
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | **Peasant** | Worker | 8 Gold | $60\text{ HP} / 6\text{ ATK} / 1.1$ | In emergency, swarms single raiders | Everything |
 | **Runebow Archer** | Ranged | 20 Gold, 15 Wood | $90\text{ HP} / 18\text{ ATK} / 6.5$ | Slow infantry, unarmored foes | Knights, Werewolves |
 | **Iron Halberdier** | Heavy Infantry | 28 Gold, 12 Iron | $180\text{ HP} / 28\text{ ATK} / 1.2$ | Cavalry, Giants, Werewolves | Archers, Catapults |
 | **Sun-Blade Knight** | Melee Champion | 55 Gold, 25 Iron | $300\text{ HP} / 48\text{ ATK} / 1.2$ | Archers, infantry lines | Halberdiers, Dragon Fire |
+| **Paladin Champion** *(Solaris)* | Holy Healer | 70 Gold, 20 Iron, 15 Honor | $380\text{ HP} / 35\text{ ATK} / 1.2$ | Melee combatants (Heals $+14\text{ HP}$ aura) | Dragon Fire, Catapults |
+| **Valkyrie Shieldmaiden** *(Frost)* | Flying Skirmisher | 65 Gold, 15 Iron, 15 Honor | $280\text{ HP} / 42\text{ ATK} / 1.2$ | Siege units, terrain-blocked foes | Archers in towers |
+| **Vampire Bloodknight** *(Obsidian)* | Drain Bruiser | 75 Gold, 10 Pitch, 15 Honor | $320\text{ HP} / 52\text{ ATK} / 1.2$ | Isolated warriors ($35\%$ lifesteal) | Halberdier swarms |
 | **Frost Giant** | Siege Brute | 75 Gold, 35 Iron, 15 Stone | $650\text{ HP} / 75\text{ ATK} / 1.6$ | Walls, gatehouses, infantry | Archers from towers |
 | **Night-Stalker Werewolf** | Shock Raider | 60 Gold, 15 Pitch | $240\text{ HP} / 60\text{ ATK} / 1.2$ | Archers, isolated peasants | Halberdier walls |
-| **Siege Catapult** | Long-Range Siege | 90 Gold, 50 Wood, 15 Stone | $350\text{ HP} / 110\text{ ATK} / 9.0$ | Castle walls, towers, Keep | Fast melee flankers |
-| **Faction Dragon** | Mythic Flying Apex | 250 Gold, 60 Honor | $1400\text{ HP} / 140\text{ ATK} / 5.5$ | Ground armies, fortifications | Massed Runebow Archers |
+| **Siege Catapult** | Long-Range Siege | 90 Gold, 50 Wood, 15 Stone | $350\text{ HP} / 110\text{ ATK} / 9.0$ | Castle walls, towers, Keep (AoE Splash) | Fast melee flankers |
+| **Faction Dragon** | Mythic Flying Apex | 250 Gold, 60 Honor | $1400\text{ HP} / 140\text{ ATK} / 5.5$ | Ground armies, fortifications (AoE Fire) | Massed Runebow Archers |
 
 ---
 

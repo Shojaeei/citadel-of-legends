@@ -25,10 +25,14 @@ class Building {
         this.isTower = def.isTower || false;
         this.isWall = def.isWall || false;
         this.isGate = def.isGate || false;
+        this.isCathedral = def.isCathedral || false;
+        this.isRunestone = def.isRunestone || false;
+        this.isCrucible = def.isCrucible || false;
         this.attackRange = this.isTower ? 7.5 : 0;
         this.attackDamage = this.isTower ? 22 : 0;
         this.attackCooldown = 0;
         this.attackRate = 1.1; // seconds between tower volleys
+        this.healCooldown = 2.5;
     }
 
     containsTile(x, y) {
@@ -40,7 +44,30 @@ class Building {
         return this.hp <= 0;
     }
 
+    repair(amt = 150) {
+        this.hp = Math.min(this.maxHp, this.hp + amt);
+    }
+
     update(dt, game) {
+        // Cathedral Healing Sanctuary Aura
+        if (this.isCathedral && !this.isEnemy && this.hp > 0) {
+            this.healCooldown -= dt;
+            if (this.healCooldown <= 0) {
+                this.healCooldown = 2.5;
+                let healed = false;
+                const cx = this.gx + this.w * 0.5;
+                const cy = this.gy + this.h * 0.5;
+                game.units.forEach(u => {
+                    if (!u.isEnemy && u.hp < u.maxHp && Math.hypot(u.x - cx, u.y - cy) <= 5.5) {
+                        u.hp = Math.min(u.maxHp, u.hp + 18);
+                        game.spawnFloatingText('+18 HP', u.x, u.y, '#22c55e');
+                        healed = true;
+                    }
+                });
+                if (healed) Sound.playHeal();
+            }
+        }
+
         // Defensive Watchtower Automated Defense
         if (this.isTower && this.hp > 0) {
             if (this.attackCooldown > 0) {
@@ -91,6 +118,8 @@ class Unit {
         this.isFlying = def.isFlying || false;
         this.isSiege = def.isSiege || false;
         this.isWorker = def.isWorker || false;
+        this.isHealer = def.isHealer || false;
+        this.isLifesteal = def.isLifesteal || false;
         this.color = def.color || '#38bdf8';
 
         this.state = 'idle'; // 'idle', 'moving', 'attacking'
@@ -99,6 +128,7 @@ class Unit {
         this.targetEntity = null;
         this.attackCooldown = 0;
         this.attackRate = type === 'dragon' ? 1.8 : type === 'catapult' ? 2.5 : 1.1;
+        this.healCooldown = 2.0;
 
         // Auto Aggro radius for soldiers
         this.aggroRadius = this.isWorker ? 0 : this.isEnemy ? 10.0 : 6.0;
@@ -113,7 +143,6 @@ class Unit {
             this.waypointIndex = 0;
             this.state = this.path.length > 0 ? 'moving' : 'idle';
         } else {
-            // Straight line fallback
             this.path = [{ x: tx, y: ty }];
             this.waypointIndex = 0;
             this.state = 'moving';
@@ -124,10 +153,9 @@ class Unit {
         this.targetEntity = entity;
         this.state = 'attacking';
 
-        // Recalculate path to target
         if (game && game.pathfinding && entity) {
-            const targetX = entity.x !== undefined ? entity.x : entity.gx + entity.w * 0.5;
-            const targetY = entity.y !== undefined ? entity.y : entity.gy + entity.h * 0.5;
+            const targetX = entity.x !== undefined ? entity.x : entity.gx + (entity.w || 1) * 0.5;
+            const targetY = entity.y !== undefined ? entity.y : entity.gy + (entity.h || 1) * 0.5;
             this.path = game.pathfinding.findPath(this.x, this.y, targetX, targetY, this.isFlying, this.isEnemy);
             this.waypointIndex = 0;
         }
@@ -136,6 +164,23 @@ class Unit {
     update(dt, game) {
         if (this.attackCooldown > 0) {
             this.attackCooldown -= dt;
+        }
+
+        // Paladin Healing Aura
+        if (this.isHealer && !this.isEnemy) {
+            this.healCooldown -= dt;
+            if (this.healCooldown <= 0) {
+                this.healCooldown = 2.0;
+                let healed = false;
+                game.units.forEach(u => {
+                    if (!u.isEnemy && u !== this && u.hp < u.maxHp && Math.hypot(u.x - this.x, u.y - this.y) <= 3.5) {
+                        u.hp = Math.min(u.maxHp, u.hp + 14);
+                        game.spawnFloatingText('+14 HP', u.x, u.y, '#22c55e');
+                        healed = true;
+                    }
+                });
+                if (healed) Sound.playHeal();
+            }
         }
 
         // 1. Combat & Target Tracking
@@ -160,10 +205,8 @@ class Unit {
                     this.attackCooldown = this.attackRate;
                 }
             } else {
-                // Move towards target along path
                 this.followWaypoints(dt, game);
 
-                // Repath occasionally if target moves
                 this.scanCooldown += dt;
                 if (this.scanCooldown > 1.2) {
                     this.scanCooldown = 0;
@@ -221,7 +264,6 @@ class Unit {
         let bestTarget = null;
         let closestDist = this.aggroRadius;
 
-        // Scan enemy units first
         for (const u of game.units) {
             if (u.isEnemy !== this.isEnemy && u.hp > 0) {
                 const dist = Math.hypot(u.x - this.x, u.y - this.y);
@@ -232,7 +274,6 @@ class Unit {
             }
         }
 
-        // If no unit, scan enemy buildings (keeps, walls, towers)
         if (!bestTarget) {
             for (const b of game.buildings) {
                 if (b.isEnemy !== this.isEnemy && b.hp > 0) {
@@ -270,6 +311,13 @@ class Unit {
             const targetY = target.y !== undefined ? target.y : target.gy + 0.5;
             game.spawnFloatingText(`-${this.atk}`, targetX, targetY, this.isEnemy ? '#ef4444' : '#f59e0b');
 
+            // Vampire Lifesteal mechanic
+            if (this.isLifesteal && this.hp < this.maxHp) {
+                const healAmt = Math.round(this.atk * 0.35);
+                this.hp = Math.min(this.maxHp, this.hp + healAmt);
+                game.spawnFloatingText(`+${healAmt} HP`, this.x, this.y, '#dc2626');
+            }
+
             if (killed) {
                 if (target instanceof Building) {
                     game.handleBuildingDestruction(target);
@@ -304,12 +352,16 @@ class Projectile {
         const dx = this.endX - startX;
         const dy = this.endY - startY;
         this.totalDist = Math.max(0.1, Math.hypot(dx, dy));
+        this.arcHeight = 0;
     }
 
     update(dt, game) {
         this.progress += (this.speed * dt) / this.totalDist;
         this.x = this.startX + (this.endX - this.startX) * this.progress;
         this.y = this.startY + (this.endY - this.startY) * this.progress;
+
+        // Parabolic height calculation
+        this.arcHeight = Math.sin(this.progress * Math.PI) * (this.type === 'boulder' ? 42 : this.type === 'fire' ? 24 : 14);
 
         if (this.progress >= 1.0) {
             // Impact!
@@ -321,6 +373,27 @@ class Projectile {
                     game.handleBuildingDestruction(this.target);
                 }
             }
+
+            // AoE Splash Damage for Catapults and Dragon Fire
+            if (this.type === 'boulder') {
+                Sound.playShatter();
+                game.units.forEach(u => {
+                    if (u !== this.target && Math.hypot(u.x - this.endX, u.y - this.endY) <= 1.8) {
+                        const splashDmg = Math.round(this.damage * 0.45);
+                        u.takeDamage(splashDmg);
+                        game.spawnFloatingText(`-${splashDmg}`, u.x, u.y, '#ea580c');
+                    }
+                });
+            } else if (this.type === 'fire') {
+                game.units.forEach(u => {
+                    if (u !== this.target && Math.hypot(u.x - this.endX, u.y - this.endY) <= 2.2) {
+                        const splashDmg = Math.round(this.damage * 0.4);
+                        u.takeDamage(splashDmg);
+                        game.spawnFloatingText(`-${splashDmg}`, u.x, u.y, '#ef4444');
+                    }
+                });
+            }
+
             return true; // Finished
         }
         return false;

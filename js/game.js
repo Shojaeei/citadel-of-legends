@@ -32,6 +32,8 @@ class CitadelGame {
         this.selectedTool = null;
         this.selectedEntity = null;
         this.selectedUnits = []; // Multi-unit selection
+        this.dragBox = { active: false, startX: 0, startY: 0, currentX: 0, currentY: 0 };
+        this.repairMode = false;
 
         this.economy = new EconomySystem(this);
         this.pathfinding = new PathfindingEngine(this);
@@ -92,8 +94,18 @@ class CitadelGame {
         });
 
         canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
             downClientX = e.clientX;
             downClientY = e.clientY;
+
+            // Shift-drag or drag without tool activates marquee box selection
+            if (e.button === 0 && (e.shiftKey || !this.selectedTool)) {
+                this.dragBox = { active: true, startX: mouseX, startY: mouseY, currentX: mouseX, currentY: mouseY };
+            }
+
             this.camera.isDragging = true;
             this.camera.startX = e.clientX - this.camera.x;
             this.camera.startY = e.clientY - this.camera.y;
@@ -108,9 +120,14 @@ class CitadelGame {
             if (mouseX >= 0 && mouseX <= canvas.width && mouseY >= 0 && mouseY <= canvas.height) {
                 const world = this.renderer.screenToWorld(mouseX, mouseY);
                 this.renderer.hoverTile = world;
+
+                if (this.dragBox && this.dragBox.active) {
+                    this.dragBox.currentX = mouseX;
+                    this.dragBox.currentY = mouseY;
+                }
             }
 
-            if (this.camera.isDragging) {
+            if (this.camera.isDragging && (!this.dragBox || !this.dragBox.active || !e.shiftKey)) {
                 const moveDist = Math.hypot(e.clientX - downClientX, e.clientY - downClientY);
                 if (moveDist > dragThreshold) {
                     this.camera.hasDragged = true;
@@ -121,6 +138,38 @@ class CitadelGame {
         });
 
         window.addEventListener('mouseup', (e) => {
+            // Check Marquee Box Selection
+            if (this.dragBox && this.dragBox.active) {
+                const bx = Math.min(this.dragBox.startX, this.dragBox.currentX);
+                const by = Math.min(this.dragBox.startY, this.dragBox.currentY);
+                const bw = Math.abs(this.dragBox.currentX - this.dragBox.startX);
+                const bh = Math.abs(this.dragBox.currentY - this.dragBox.startY);
+                this.dragBox.active = false;
+
+                if (bw > 12 && bh > 12) {
+                    const selected = [];
+                    this.units.forEach(u => {
+                        if (!u.isEnemy && !u.isWorker) {
+                            const screen = this.renderer.worldToScreen(u.x, u.y);
+                            const pixelX = this.renderer.canvas.width / 2 + this.camera.x + screen.x * this.camera.zoom;
+                            const pixelY = 120 + this.camera.y + screen.y * this.camera.zoom;
+                            if (pixelX >= bx && pixelX <= bx + bw && pixelY >= by && pixelY <= by + bh) {
+                                selected.push(u);
+                            }
+                        }
+                    });
+
+                    if (selected.length > 0) {
+                        this.selectedUnits = selected;
+                        this.selectedEntity = selected[0];
+                        this.showToast(`Selected ${selected.length} military units (Shift+Drag Box)`);
+                        Sound.playSwordClash();
+                        this.camera.isDragging = false;
+                        return;
+                    }
+                }
+            }
+
             if (!this.camera.isDragging) return;
             this.camera.isDragging = false;
 
@@ -240,7 +289,7 @@ class CitadelGame {
 
     centerOnKeep() {
         const keep = this.playerKeep || this.buildings.find(b => b.type === 'keep' && !b.isEnemy);
-        if (keep) {
+        if (keep && this.renderer) {
             const screen = this.renderer.worldToScreen(keep.gx + 1.5, keep.gy + 1.5);
             this.camera.x = -screen.x;
             this.camera.y = -screen.y;
@@ -653,6 +702,16 @@ class CitadelGame {
                 if (def.producer) {
                     statsHtml += `<div>Production: <span class="font-bold text-emerald-400">+${def.rate} ${def.producer.toUpperCase()}/s</span></div>`;
                 }
+                if (!entity.isEnemy && entity.hp < entity.maxHp) {
+                    statsHtml += `
+                        <div class="mt-2 pt-2 border-t border-stone-700/60 flex items-center justify-between">
+                            <span class="text-xs text-amber-200">Damaged: ${Math.round(entity.hp)}/${entity.maxHp} HP</span>
+                            <button onclick="GameApp.repairBuilding(GameApp.selectedEntity)" class="parchment-button px-2.5 py-1 text-xs rounded text-amber-300 font-bold hover:text-white pointer-events-auto">
+                                🔨 Repair (5W, 8S)
+                            </button>
+                        </div>
+                    `;
+                }
             }
 
             document.getElementById('inspector-stats').innerHTML = statsHtml;
@@ -742,6 +801,88 @@ class CitadelGame {
         }
     }
 
+    advanceNextMission() {
+        const faction = this.faction || 'solaris';
+        const factionMissions = CAMPAIGN_MISSIONS[faction] || CAMPAIGN_MISSIONS.solaris;
+        const currentId = this.currentMissionData ? this.currentMissionData.id : 1;
+        const nextMission = factionMissions.find(m => m.id === currentId + 1);
+        if (nextMission) {
+            this.startCampaign(faction, nextMission.id);
+        } else {
+            this.showToast('You have conquered all campaign missions for this faction! Hail Sovereign!', false);
+            this.returnToMenu();
+        }
+    }
+
+    selectAllMilitary() {
+        const military = this.units.filter(u => !u.isEnemy && !u.isWorker);
+        if (military.length === 0) {
+            this.showToast('No active military units found in your garrison!', true);
+            return;
+        }
+        this.selectedUnits = military;
+        this.selectedEntity = military[0];
+        this.showToast(`Selected all ${military.length} military units!`);
+        Sound.playSwordClash();
+    }
+
+    repairBuilding(b) {
+        if (!b || b.isEnemy) return;
+        if (b.hp >= b.maxHp) {
+            this.showToast('Structure is already at full structural integrity.');
+            return;
+        }
+        const cost = { wood: 5, stone: 8 };
+        if (!this.economy.canAfford(cost)) {
+            const missing = this.economy.getMissingResources(cost);
+            this.showToast(`Cannot repair: Need ${missing.join(', ')}`, true);
+            Sound.playWarning();
+            return;
+        }
+        this.economy.deductCost(cost);
+        b.repair(300);
+        Sound.playBuild();
+        this.spawnFloatingText('+Repair', b.gx + b.w / 2, b.gy + b.h / 2, '#38bdf8');
+        this.showToast(`Repaired ${b.name} (+300 HP)`);
+        this.selectEntityAt(b.gx, b.gy);
+        this.updateUI();
+    }
+
+    triggerBoilingPitch() {
+        const cost = { pitch: 5 };
+        if (!this.economy.canAfford(cost)) {
+            this.showToast('Boiling Pitch requires 5 Pitch from your stockpile!', true);
+            Sound.playWarning();
+            return;
+        }
+        this.economy.deductCost(cost);
+        Sound.playShatter();
+
+        const defenses = this.buildings.filter(b => !b.isEnemy && (b.type === 'wall' || b.type === 'tower' || b.type === 'gatehouse' || b.type === 'keep'));
+        let burntCount = 0;
+
+        this.units.forEach(u => {
+            if (u.isEnemy) {
+                const nearDefense = defenses.some(b => {
+                    const cx = b.gx + b.w / 2;
+                    const cy = b.gy + b.h / 2;
+                    return Math.hypot(u.x - cx, u.y - cy) <= 4.0;
+                });
+                if (nearDefense) {
+                    u.takeDamage(75, this);
+                    this.spawnFloatingText('-75 Fire', u.x, u.y, '#f97316');
+                    burntCount++;
+                }
+            }
+        });
+
+        this.showToast(`🔥 Boiling Pitch poured! ${burntCount} enemy invaders engulfed!`);
+        if (this.devConsole) {
+            this.devConsole.log(`Boiling Pitch defense triggered: ${burntCount} enemies engulfed in flames!`, 'DEFENSE');
+        }
+        this.updateUI();
+    }
+
     // --- Particles & Projectiles ---
     spawnFloatingText(text, gx, gy, color = '#fef3c7') {
         const particle = new Particle(gx, gy, text, color);
@@ -768,8 +909,14 @@ class CitadelGame {
         let items = [];
         if (tab === 'building') {
             items = ['hovel', 'stockpile', 'granary', 'sawyer', 'quarry', 'mine', 'tar', 'hunter', 'bakery'];
+            if (this.faction === 'solaris') items.push('cathedral');
+            else if (this.faction === 'frost') items.push('runestone');
+            else if (this.faction === 'obsidian') items.push('crucible');
         } else if (tab === 'military') {
             items = ['barracks', 'archery', 'siege', 'archer', 'halberdier', 'knight', 'catapult'];
+            if (this.faction === 'solaris') items.push('paladin');
+            else if (this.faction === 'frost') items.push('valkyrie');
+            else if (this.faction === 'obsidian') items.push('vampire');
         } else if (tab === 'defenses') {
             items = ['wall', 'tower', 'gatehouse'];
         } else if (tab === 'mythic') {

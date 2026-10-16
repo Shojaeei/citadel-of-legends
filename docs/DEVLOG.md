@@ -88,3 +88,27 @@ A thorough code review identified the following critical vulnerabilities and des
 ### ADR-003: Isometric Projection Mathematics
 - **Decision:** Adopt a $2:1$ dimetric isometric standard ($64\times 32\text{ px}$ tiles) with inverse screen-to-world unprojection that factors in camera translation and zoom dynamically.
 - **Rationale:** Provides optimal retro Stronghold aesthetic while allowing accurate mouse tile hit testing even at extreme zoom levels.
+
+---
+
+## 📅 Milestone 5: Phase 3 Asymmetric Warfare & Polish
+
+### Objectives & Deliverables
+1. **Faction Asymmetry & Unique Specializations:**
+   - **Solaris Order:** Added **Cathedral of Light** ($+4\text{ Honor/sec}$) and holy **Paladin Champion** with an autonomous healing aura ($+14\text{ HP}$ to nearby wounded allies every 2 seconds).
+   - **Frostbound Covenant:** Added **Glacial Runestone** ($+4\text{ Honor/sec}$) and airborne **Valkyrie Shieldmaiden** with rapid flight mobility over obstacles.
+   - **Obsidian Scourge:** Added **Blood Crucible Spire** ($+4\text{ Honor/sec}$) and vampiric **Vampire Bloodknight** with $35\%$ lifesteal on melee strikes.
+2. **Dynamic Drag-Box & Army Selection:**
+   - Screen-space marquee selection (`dragBox`) with parchment gold outline and semi-transparent fill.
+   - Hotkey and HUD button `[⚔️ Army]` to instantly select all active military units and exclude civilian workers.
+3. **Parabolic Ballistics & Splash Damage:**
+   - Siege Catapult boulders and Dragon fire projectiles follow genuine 3D parabolic arcs with dynamic ground drop-shadows.
+   - Catapult boulders deal direct impact damage plus $45\%$ AoE splash damage in a $1.8$-tile impact crater. Dragon fire deals $40\%$ splash damage over $2.2$ tiles.
+4. **Stronghold Defenses & Structural Maintenance:**
+   - **Boiling Pitch Defense (`[🔥 Pitch]`):** Dumps boiling brimstone tar from ramparts, dealing $75$ fire damage to all invaders within $4$ tiles of walls and gates.
+   - **Repair System:** Damaged structures display real-time HP status on the inspector card with a `[🔨 Repair (5W, 8S)]` action button.
+5. **Campaign Progression & Mission Chaining:**
+   - Linked Campaign missions (1, 2, 3) across all three factions with automated next-mission advancement upon fortress victory.
+6. **Automated Verification Suite:**
+   - Headless Node.js test suite with 31 automated tests covering economy, pathfinding, faction passives, splash damage, repair, and tactical abilities, passing with 100% success rate.
+

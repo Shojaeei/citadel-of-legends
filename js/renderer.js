@@ -63,6 +63,23 @@ class IsometricRenderer {
         this.renderParticles();
 
         ctx.restore();
+
+        // 5. Render Screen-Space Marquee Selection Box
+        if (this.game.dragBox && this.game.dragBox.active) {
+            const bx = Math.min(this.game.dragBox.startX, this.game.dragBox.currentX);
+            const by = Math.min(this.game.dragBox.startY, this.game.dragBox.currentY);
+            const bw = Math.abs(this.game.dragBox.currentX - this.game.dragBox.startX);
+            const bh = Math.abs(this.game.dragBox.currentY - this.game.dragBox.startY);
+
+            ctx.save();
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+            ctx.fillRect(bx, by, bw, bh);
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(bx, by, bw, bh);
+            ctx.restore();
+        }
     }
 
     renderTerrain() {
@@ -300,6 +317,29 @@ class IsometricRenderer {
             ctx.beginPath();
             ctx.arc(cx, cy - height + 2, 7, 0, Math.PI * 2);
             ctx.fill();
+        } else if (b.type === 'cathedral') {
+            // Holy Golden Cross & Spires
+            ctx.fillStyle = '#facc15';
+            ctx.shadowColor = '#fef08a';
+            ctx.shadowBlur = 8;
+            ctx.fillRect(cx - 2, cy - height - 20, 4, 20);
+            ctx.fillRect(cx - 7, cy - height - 15, 14, 4);
+        } else if (b.type === 'runestone') {
+            // Glacial Runestone Monolith
+            ctx.fillStyle = '#38bdf8';
+            ctx.shadowColor = '#0284c7';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(cx, cy - height - 8, 6, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (b.type === 'crucible') {
+            // Blood Fire Crucible
+            ctx.fillStyle = '#dc2626';
+            ctx.shadowColor = '#ef4444';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(cx, cy - height - 10, 8, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         // Building Label
@@ -384,6 +424,50 @@ class IsometricRenderer {
             ctx.arc(screen.x - 6, unitY + 6, 4, 0, Math.PI * 2);
             ctx.arc(screen.x + 6, unitY + 6, 4, 0, Math.PI * 2);
             ctx.fill();
+        } else if (u.type === 'paladin') {
+            // Avalon Holy Paladin
+            ctx.fillStyle = '#facc15';
+            ctx.shadowColor = '#fef08a';
+            ctx.shadowBlur = 6;
+            ctx.beginPath();
+            ctx.arc(screen.x, unitY - 2, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            // Golden Shield
+            ctx.fillStyle = '#eab308';
+            ctx.fillRect(screen.x - 10, unitY - 5, 4, 10);
+            ctx.shadowBlur = 0;
+        } else if (u.type === 'valkyrie') {
+            // Frost Valkyrie (Winged)
+            ctx.fillStyle = '#7dd3fc';
+            ctx.beginPath();
+            ctx.arc(screen.x, unitY - 6, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            // Azure Wings
+            ctx.fillStyle = '#bae6fd';
+            ctx.beginPath();
+            ctx.moveTo(screen.x - 7, unitY - 6);
+            ctx.lineTo(screen.x - 18, unitY - 14);
+            ctx.lineTo(screen.x - 3, unitY - 3);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(screen.x + 7, unitY - 6);
+            ctx.lineTo(screen.x + 18, unitY - 14);
+            ctx.lineTo(screen.x + 3, unitY - 3);
+            ctx.closePath();
+            ctx.fill();
+        } else if (u.type === 'vampire') {
+            // Vampire Bloodknight
+            ctx.fillStyle = '#991b1b';
+            ctx.beginPath();
+            ctx.arc(screen.x, unitY - 2, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            // Dark Crimson Cape
+            ctx.fillStyle = '#450a0a';
+            ctx.fillRect(screen.x - 8, unitY - 3, 3, 9);
         } else if (u.type === 'knight') {
             // Sun-Blade Knight
             ctx.fillStyle = '#fbbf24';
@@ -434,26 +518,38 @@ class IsometricRenderer {
     drawProjectile(p) {
         const ctx = this.ctx;
         const screen = this.worldToScreen(p.x, p.y);
+        const visualY = screen.y - (p.arcHeight || 0);
 
         ctx.save();
+
+        // Parabolic Ground Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(screen.x, screen.y + 6, p.type === 'boulder' ? 6 : 4, p.type === 'boulder' ? 3 : 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Projectile Body
         if (p.type === 'arrow') {
             ctx.strokeStyle = '#e2e8f0';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(screen.x - 3, screen.y - 3);
-            ctx.lineTo(screen.x + 3, screen.y + 3);
+            ctx.moveTo(screen.x - 3, visualY - 3);
+            ctx.lineTo(screen.x + 3, visualY + 3);
             ctx.stroke();
         } else if (p.type === 'boulder') {
             ctx.fillStyle = '#78716c';
             ctx.beginPath();
-            ctx.arc(screen.x, screen.y - 6, 5, 0, Math.PI * 2);
+            ctx.arc(screen.x, visualY - 4, 6, 0, Math.PI * 2);
             ctx.fill();
+            ctx.strokeStyle = '#292524';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
         } else if (p.type === 'fire') {
             ctx.fillStyle = '#ef4444';
             ctx.shadowColor = '#f97316';
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = 10;
             ctx.beginPath();
-            ctx.arc(screen.x, screen.y - 10, 8, 0, Math.PI * 2);
+            ctx.arc(screen.x, visualY - 6, 8, 0, Math.PI * 2);
             ctx.fill();
         }
         ctx.restore();

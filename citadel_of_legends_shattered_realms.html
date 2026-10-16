@@ -219,6 +219,8 @@
                         Wave 1 in: 60s
                     </div>
                     <button onclick="GameApp.triggerEnemyWave()" class="parchment-button !bg-red-950 !border-red-600 px-2 py-1 rounded text-xs font-bold" title="Call invasion wave immediately">⚔️ Rush Wave</button>
+                    <button onclick="GameApp.selectAllMilitary()" class="parchment-button !bg-amber-950 !border-amber-600 px-2 py-1 rounded text-xs font-bold" title="Select all active military units (or Shift+Drag on canvas)">⚔️ Army</button>
+                    <button onclick="GameApp.triggerBoilingPitch()" class="parchment-button !bg-orange-950 !border-orange-600 px-2 py-1 rounded text-xs font-bold" title="Defend walls: Pour boiling pitch on nearby foes (Cost: 5 Pitch)">🔥 Pitch</button>
                     <div id="mission-objective-banner" class="hidden md:flex items-center bg-stone-900/90 border border-amber-600/50 px-3 py-1 rounded text-amber-200 text-xs shadow-md">
                         <span class="font-bold mr-1.5 text-amber-400">Objective:</span>
                         <span id="objective-text">Build Keep & Stockpile</span>
@@ -236,7 +238,7 @@
                 <canvas id="game-canvas" class="absolute inset-0 w-full h-full block"></canvas>
                 
                 <!-- Floating Info Card for Selected Building / Unit -->
-                <div id="inspector-card" class="absolute top-4 left-4 floating-card parchment-panel p-3.5 rounded-lg w-72 hidden z-20 pointer-events-none">
+                <div id="inspector-card" class="absolute top-4 left-4 floating-card parchment-panel p-3.5 rounded-lg w-72 hidden z-20 pointer-events-auto">
                     <div id="inspector-title" class="font-bold text-amber-400 text-base mb-1">Building Title</div>
                     <div id="inspector-desc" class="text-xs text-stone-300 mb-2 leading-relaxed">Description and stats go here.</div>
                     <div id="inspector-stats" class="text-xs text-amber-200/90 space-y-1 border-t border-stone-700 pt-2"></div>
@@ -335,7 +337,7 @@
                 <div id="victory-stats" class="bg-stone-900 border border-stone-800 p-4 rounded-lg w-full text-xs text-stone-300 space-y-1 mb-6 text-left"></div>
                 <div class="flex space-x-3 w-full">
                     <button onclick="GameApp.returnToMenu()" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1 bg-stone-800">Main Menu</button>
-                    <button onclick="GameApp.returnToMenu()" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1 !bg-amber-600 hover:!bg-amber-500">Next Campaign</button>
+                    <button onclick="GameApp.advanceNextMission()" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1 !bg-amber-600 hover:!bg-amber-500">Next Campaign</button>
                 </div>
             </div>
         </div>

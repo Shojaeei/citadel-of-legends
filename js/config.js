@@ -226,6 +226,42 @@ const BUILDINGS_DEF = {
         workers: 0,
         mythic: true,
         color: '#7e22ce'
+    },
+    cathedral: {
+        id: 'cathedral',
+        name: 'Cathedral of Avalon',
+        desc: 'Sacred Arthurian sanctuary. Generates Arcane Honor (+2/s) and radiates an aura healing nearby wounded troops.',
+        category: 'mythic',
+        w: 2, h: 2,
+        hp: 1600,
+        cost: { wood: 75, stone: 100, gold: 80, honor: 15 },
+        workers: 0,
+        isCathedral: true,
+        color: '#facc15'
+    },
+    runestone: {
+        id: 'runestone',
+        name: 'Frostbound Runestone',
+        desc: 'Ancient glacial monolith carved with elder runes. Generates Arcane Honor (+2/s) and empowers nearby allies.',
+        category: 'mythic',
+        w: 2, h: 2,
+        hp: 1700,
+        cost: { stone: 120, iron: 30, gold: 60, honor: 15 },
+        workers: 0,
+        isRunestone: true,
+        color: '#0284c7'
+    },
+    crucible: {
+        id: 'crucible',
+        name: 'Blood Crucible Spire',
+        desc: 'Unholy gothic spire that transmutes darkness into boiling tar (+4 Pitch/s) and generates Arcane Honor (+2/s).',
+        category: 'mythic',
+        w: 2, h: 2,
+        hp: 1500,
+        cost: { wood: 60, stone: 90, pitch: 20, gold: 70, honor: 15 },
+        workers: 0,
+        isCrucible: true,
+        color: '#991b1b'
     }
 };
 
@@ -311,6 +347,42 @@ const UNITS_DEF = {
         projectile: 'boulder',
         color: '#ea580c'
     },
+    paladin: {
+        id: 'paladin',
+        name: 'Avalon Paladin',
+        desc: 'Holy champion clad in blessed steel. Radiates an aura that heals nearby wounded allies.',
+        cost: { gold: 65, iron: 25, honor: 15 },
+        hp: 360,
+        atk: 52,
+        range: 1.3,
+        speed: 1.1,
+        isHealer: true,
+        color: '#fde047'
+    },
+    valkyrie: {
+        id: 'valkyrie',
+        name: 'Frost Valkyrie',
+        desc: 'Winged shieldmaiden soaring across obstacles with armor-piercing glacial spears.',
+        cost: { gold: 60, iron: 20, honor: 15 },
+        hp: 280,
+        atk: 55,
+        range: 2.2,
+        speed: 1.5,
+        isFlying: true,
+        color: '#7dd3fc'
+    },
+    vampire: {
+        id: 'vampire',
+        name: 'Vampire Bloodknight',
+        desc: 'Undead noble of the night. Siphons health from slain adversaries to heal himself in combat.',
+        cost: { gold: 70, pitch: 20, honor: 15 },
+        hp: 320,
+        atk: 58,
+        range: 1.3,
+        speed: 1.35,
+        isLifesteal: true,
+        color: '#dc2626'
+    },
     dragon: {
         id: 'dragon',
         name: 'Faction Dragon',
@@ -333,11 +405,12 @@ const FACTIONS_DEF = {
         biome: 'valley',
         primaryColor: '#f59e0b',
         bannerIcon: '☀️',
-        description: 'Chivalric realm of light. Boasts disciplined Sun-Blade Knights, prolific bakeries, and the Solaris Dragon.',
+        description: 'Chivalric realm of light. Boasts disciplined Sun-Blade Knights, Avalon Paladins, prolific bakeries, Cathedral of Avalon, and the Solaris Dragon.',
         bonuses: {
             taxIncomeMultiplier: 1.2,
             foodRateMultiplier: 1.15,
-            specialUnit: 'knight'
+            specialUnit: 'paladin',
+            specialBuilding: 'cathedral'
         }
     },
     frost: {
@@ -346,11 +419,12 @@ const FACTIONS_DEF = {
         biome: 'tundra',
         primaryColor: '#38bdf8',
         bannerIcon: '❄️',
-        description: 'Hardened clan of northern peaks. Masters of stonecraft, hunter traditions, Frost Giants, and Ice Wyverns.',
+        description: 'Hardened clan of northern peaks. Masters of stonecraft, hunter traditions, Frost Valkyries, Frost Giants, Runestone Dais, and Ice Wyverns.',
         bonuses: {
             stoneRateMultiplier: 1.3,
             mineRateMultiplier: 1.2,
-            specialUnit: 'giant'
+            specialUnit: 'valkyrie',
+            specialBuilding: 'runestone'
         }
     },
     obsidian: {
@@ -359,11 +433,12 @@ const FACTIONS_DEF = {
         biome: 'wasteland',
         primaryColor: '#ef4444',
         bannerIcon: '🦇',
-        description: 'Ruthless dread lords of brimstone and blood. Commands terrifying Werewolves, boiling tar defenses, and the Abyss Dragon.',
+        description: 'Ruthless dread lords of brimstone and blood. Commands terrifying Vampire Bloodknights, Werewolves, Blood Crucible Spires, and the Abyss Dragon.',
         bonuses: {
             tarRateMultiplier: 1.4,
             unitSpeedMultiplier: 1.15,
-            specialUnit: 'werewolf'
+            specialUnit: 'vampire',
+            specialBuilding: 'crucible'
         }
     }
 };

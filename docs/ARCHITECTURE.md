@@ -141,3 +141,33 @@ Units navigate the map using an $A^*$ grid pathfinding algorithm:
   $$h(n) = |n.x - \text{goal}.x| + |n.y - \text{goal}.y|$$
 - Bridge tiles across the river are designated as walkable corridors.
 - Flying units (Faction Dragons) bypass the passability matrix, traveling in direct Euclidean lines.
+
+---
+
+## 7. Ballistics, Splash Damage & Marquee Selection
+
+### Parabolic Ballistic Trajectories
+Projectiles (`boulder`, `fire`, `arrow`) compute real-time flight progress $p \in [0, 1]$ over the Euclidean path:
+
+$$p(t) = \min\left(1.0, \, p(t - \Delta t) + \frac{v \cdot \Delta t}{d_{\text{total}}}\right)$$
+
+The parabolic arc height is evaluated via sinusoidal displacement:
+
+$$y_{\text{arc}}(p) = \sin(p \cdot \pi) \cdot H_{\text{peak}}$$
+
+Where $H_{\text{peak}} = 42\text{ px}$ for heavy catapult boulders, $24\text{ px}$ for dragon fireballs, and $14\text{ px}$ for arrows. A simulated circular shadow is rendered on the ground directly beneath $(x(p), y(p))$ with radius scaling inversely to height.
+
+### Radial Splash Damage
+Upon $p \ge 1.0$:
+- Catapult boulders inflict $45\%$ splash damage to all units within radius $r = 1.8$ tiles.
+- Dragon fireballs inflict $40\%$ splash damage within radius $r = 2.2$ tiles.
+
+### Screen-Space Marquee Box Selection
+Drag-box selection converts world coordinates of all friendly units to canvas screen space:
+
+$$P_x = \frac{\text{canvasWidth}}{2} + \text{camera.x} + \text{screenX} \cdot \text{zoom}$$
+
+$$P_y = \text{offsetY} + \text{camera.y} + \text{screenY} \cdot \text{zoom}$$
+
+When $P_x \in [b_x, b_x + b_w]$ and $P_y \in [b_y, b_y + b_h]$, the unit is enqueued into `game.selectedUnits` (filtering out civilian worker peasants).
+
