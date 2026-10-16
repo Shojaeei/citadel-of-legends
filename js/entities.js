@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Citadel of Legends: Shattered Realms - Entity Definitions & Behaviors
+   Citadel of Legends: Shattered Realms - Entity Definitions & Combat Behaviors
    ========================================================================== */
 
 let _nextEntityId = 1;
@@ -20,6 +20,15 @@ class Building {
         this.maxHp = def.hp || 500;
         this.hp = this.maxHp;
         this.color = def.color || '#78350f';
+
+        // Defensive Tower combat stats
+        this.isTower = def.isTower || false;
+        this.isWall = def.isWall || false;
+        this.isGate = def.isGate || false;
+        this.attackRange = this.isTower ? 7.5 : 0;
+        this.attackDamage = this.isTower ? 22 : 0;
+        this.attackCooldown = 0;
+        this.attackRate = 1.1; // seconds between tower volleys
     }
 
     containsTile(x, y) {
@@ -29,6 +38,37 @@ class Building {
     takeDamage(amt) {
         this.hp = Math.max(0, this.hp - amt);
         return this.hp <= 0;
+    }
+
+    update(dt, game) {
+        // Defensive Watchtower Automated Defense
+        if (this.isTower && this.hp > 0) {
+            if (this.attackCooldown > 0) {
+                this.attackCooldown -= dt;
+            } else {
+                // Find nearest hostile unit within range
+                const centerX = this.gx + this.w * 0.5;
+                const centerY = this.gy + this.h * 0.5;
+                let nearestEnemy = null;
+                let nearestDist = this.attackRange;
+
+                for (const u of game.units) {
+                    if (u.isEnemy !== this.isEnemy && u.hp > 0) {
+                        const dist = Math.hypot(u.x - centerX, u.y - centerY);
+                        if (dist <= nearestDist) {
+                            nearestDist = dist;
+                            nearestEnemy = u;
+                        }
+                    }
+                }
+
+                if (nearestEnemy) {
+                    Sound.playBowTwang();
+                    game.spawnProjectile('arrow', centerX, centerY, nearestEnemy, this.attackDamage);
+                    this.attackCooldown = this.attackRate;
+                }
+            }
+        }
     }
 }
 
@@ -50,26 +90,47 @@ class Unit {
         this.speed = def.speed || 1.0;
         this.isFlying = def.isFlying || false;
         this.isSiege = def.isSiege || false;
+        this.isWorker = def.isWorker || false;
         this.color = def.color || '#38bdf8';
 
         this.state = 'idle'; // 'idle', 'moving', 'attacking'
-        this.targetX = x;
-        this.targetY = y;
+        this.path = [];
+        this.waypointIndex = 0;
         this.targetEntity = null;
         this.attackCooldown = 0;
-        this.attackRate = 1.2; // seconds per attack
+        this.attackRate = type === 'dragon' ? 1.8 : type === 'catapult' ? 2.5 : 1.1;
+
+        // Auto Aggro radius for soldiers
+        this.aggroRadius = this.isWorker ? 0 : this.isEnemy ? 10.0 : 6.0;
+        this.scanCooldown = 0;
     }
 
-    moveTo(tx, ty) {
-        this.targetX = tx;
-        this.targetY = ty;
+    moveTo(tx, ty, game = null) {
         this.targetEntity = null;
-        this.state = 'moving';
+
+        if (game && game.pathfinding) {
+            this.path = game.pathfinding.findPath(this.x, this.y, tx, ty, this.isFlying, this.isEnemy);
+            this.waypointIndex = 0;
+            this.state = this.path.length > 0 ? 'moving' : 'idle';
+        } else {
+            // Straight line fallback
+            this.path = [{ x: tx, y: ty }];
+            this.waypointIndex = 0;
+            this.state = 'moving';
+        }
     }
 
-    attackTarget(entity) {
+    attackTarget(entity, game = null) {
         this.targetEntity = entity;
         this.state = 'attacking';
+
+        // Recalculate path to target
+        if (game && game.pathfinding && entity) {
+            const targetX = entity.x !== undefined ? entity.x : entity.gx + entity.w * 0.5;
+            const targetY = entity.y !== undefined ? entity.y : entity.gy + entity.h * 0.5;
+            this.path = game.pathfinding.findPath(this.x, this.y, targetX, targetY, this.isFlying, this.isEnemy);
+            this.waypointIndex = 0;
+        }
     }
 
     update(dt, game) {
@@ -77,7 +138,7 @@ class Unit {
             this.attackCooldown -= dt;
         }
 
-        // Handle Target Entity Tracking
+        // 1. Combat & Target Tracking
         if (this.state === 'attacking' && this.targetEntity) {
             if (this.targetEntity.hp <= 0) {
                 this.targetEntity = null;
@@ -85,49 +146,109 @@ class Unit {
                 return;
             }
 
-            const targetX = this.targetEntity.x !== undefined ? this.targetEntity.x : this.targetEntity.gx + 0.5;
-            const targetY = this.targetEntity.y !== undefined ? this.targetEntity.y : this.targetEntity.gy + 0.5;
+            const targetX = this.targetEntity.x !== undefined ? this.targetEntity.x : this.targetEntity.gx + (this.targetEntity.w || 1) * 0.5;
+            const targetY = this.targetEntity.y !== undefined ? this.targetEntity.y : this.targetEntity.gy + (this.targetEntity.h || 1) * 0.5;
 
             const dx = targetX - this.x;
             const dy = targetY - this.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            const dist = Math.hypot(dx, dy);
 
-            if (dist <= this.range) {
-                // In Attack Range
+            // Check if inside weapon attack range
+            if (dist <= this.range + (this.targetEntity instanceof Building ? 0.8 : 0)) {
                 if (this.attackCooldown <= 0) {
                     this.performAttack(this.targetEntity, game);
                     this.attackCooldown = this.attackRate;
                 }
             } else {
-                // Move towards target
-                const moveDist = this.speed * dt;
-                this.x += (dx / dist) * moveDist;
-                this.y += (dy / dist) * moveDist;
+                // Move towards target along path
+                this.followWaypoints(dt, game);
+
+                // Repath occasionally if target moves
+                this.scanCooldown += dt;
+                if (this.scanCooldown > 1.2) {
+                    this.scanCooldown = 0;
+                    if (this.targetEntity instanceof Unit) {
+                        this.path = game.pathfinding.findPath(this.x, this.y, targetX, targetY, this.isFlying, this.isEnemy);
+                        this.waypointIndex = 0;
+                    }
+                }
             }
             return;
         }
 
-        // Handle Movement
+        // 2. Waypoint Movement
         if (this.state === 'moving') {
-            const dx = this.targetX - this.x;
-            const dy = this.targetY - this.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            this.followWaypoints(dt, game);
+            return;
+        }
 
-            if (dist < 0.15) {
-                this.x = this.targetX;
-                this.y = this.targetY;
+        // 3. Autonomous Enemy Scanning (if Idle)
+        if (this.state === 'idle' && !this.isWorker) {
+            this.scanCooldown += dt;
+            if (this.scanCooldown >= 0.5) {
+                this.scanCooldown = 0;
+                this.autoScanForEnemies(game);
+            }
+        }
+    }
+
+    followWaypoints(dt, game) {
+        if (!this.path || this.waypointIndex >= this.path.length) {
+            this.state = 'idle';
+            return;
+        }
+
+        const wp = this.path[this.waypointIndex];
+        const dx = wp.x - this.x;
+        const dy = wp.y - this.y;
+        const dist = Math.hypot(dx, dy);
+
+        const step = this.speed * dt * 1.6;
+        if (dist <= step) {
+            this.x = wp.x;
+            this.y = wp.y;
+            this.waypointIndex++;
+            if (this.waypointIndex >= this.path.length) {
                 this.state = 'idle';
-            } else {
-                const moveDist = Math.min(dist, this.speed * dt * 1.5);
-                this.x += (dx / dist) * moveDist;
-                this.y += (dy / dist) * moveDist;
             }
-        } else if (this.state === 'idle' && this.type === 'peasant') {
-            // Gentle wandering for peasants around Keep
-            if (Math.random() < 0.02) {
-                this.x += (Math.random() - 0.5) * 0.15;
-                this.y += (Math.random() - 0.5) * 0.15;
+        } else {
+            this.x += (dx / dist) * step;
+            this.y += (dy / dist) * step;
+        }
+    }
+
+    autoScanForEnemies(game) {
+        let bestTarget = null;
+        let closestDist = this.aggroRadius;
+
+        // Scan enemy units first
+        for (const u of game.units) {
+            if (u.isEnemy !== this.isEnemy && u.hp > 0) {
+                const dist = Math.hypot(u.x - this.x, u.y - this.y);
+                if (dist <= closestDist) {
+                    closestDist = dist;
+                    bestTarget = u;
+                }
             }
+        }
+
+        // If no unit, scan enemy buildings (keeps, walls, towers)
+        if (!bestTarget) {
+            for (const b of game.buildings) {
+                if (b.isEnemy !== this.isEnemy && b.hp > 0) {
+                    const cx = b.gx + b.w * 0.5;
+                    const cy = b.gy + b.h * 0.5;
+                    const dist = Math.hypot(cx - this.x, cy - this.y);
+                    if (dist <= closestDist + 2.0) {
+                        closestDist = dist;
+                        bestTarget = b;
+                    }
+                }
+            }
+        }
+
+        if (bestTarget) {
+            this.attackTarget(bestTarget, game);
         }
     }
 
@@ -142,11 +263,17 @@ class Unit {
             Sound.playDragonRoar();
             game.spawnProjectile('fire', this.x, this.y, target, this.atk);
         } else {
-            // Melee Attack
+            // Melee Strike
             Sound.playSwordClash();
             const killed = target.takeDamage(this.atk);
-            game.spawnFloatingText(`-${this.atk}`, target.x || target.gx, target.y || target.gy, '#ef4444');
+            const targetX = target.x !== undefined ? target.x : target.gx + 0.5;
+            const targetY = target.y !== undefined ? target.y : target.gy + 0.5;
+            game.spawnFloatingText(`-${this.atk}`, targetX, targetY, this.isEnemy ? '#ef4444' : '#f59e0b');
+
             if (killed) {
+                if (target instanceof Building) {
+                    game.handleBuildingDestruction(target);
+                }
                 this.targetEntity = null;
                 this.state = 'idle';
             }
@@ -167,16 +294,16 @@ class Projectile {
         this.target = target;
         this.damage = damage;
         this.progress = 0;
-        this.speed = type === 'arrow' ? 4.5 : type === 'fire' ? 3.0 : 2.5;
+        this.speed = type === 'arrow' ? 5.5 : type === 'fire' ? 3.8 : 3.0;
 
         this.startX = startX;
         this.startY = startY;
-        this.endX = target.x !== undefined ? target.x : target.gx + 0.5;
-        this.endY = target.y !== undefined ? target.y : target.gy + 0.5;
+        this.endX = target.x !== undefined ? target.x : target.gx + (target.w || 1) * 0.5;
+        this.endY = target.y !== undefined ? target.y : target.gy + (target.h || 1) * 0.5;
 
         const dx = this.endX - startX;
         const dy = this.endY - startY;
-        this.totalDist = Math.max(0.1, Math.sqrt(dx * dx + dy * dy));
+        this.totalDist = Math.max(0.1, Math.hypot(dx, dy));
     }
 
     update(dt, game) {
@@ -187,8 +314,12 @@ class Projectile {
         if (this.progress >= 1.0) {
             // Impact!
             if (this.target && this.target.hp > 0) {
-                this.target.takeDamage(this.damage);
-                game.spawnFloatingText(`-${this.damage}`, this.endX, this.endY, '#f97316');
+                const killed = this.target.takeDamage(this.damage);
+                game.spawnFloatingText(`-${this.damage}`, this.endX, this.endY, this.type === 'fire' ? '#ef4444' : '#f97316');
+
+                if (killed && this.target instanceof Building) {
+                    game.handleBuildingDestruction(this.target);
+                }
             }
             return true; // Finished
         }

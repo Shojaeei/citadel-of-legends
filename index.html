@@ -213,14 +213,21 @@
                     </div>
                 </div>
 
-                <!-- Mission & Menu Controls -->
-                <div class="flex items-center space-x-3">
+                <!-- Mission, Wave & Menu Controls -->
+                <div class="flex items-center space-x-2 md:space-x-3">
+                    <div id="wave-countdown" class="resource-badge !border-red-600/70 text-red-300 font-bold hidden md:inline-flex" title="Next Enemy Siege Wave">
+                        Wave 1 in: 60s
+                    </div>
+                    <button onclick="GameApp.triggerEnemyWave()" class="parchment-button !bg-red-950 !border-red-600 px-2 py-1 rounded text-xs font-bold" title="Call invasion wave immediately">⚔️ Rush Wave</button>
                     <div id="mission-objective-banner" class="hidden md:flex items-center bg-stone-900/90 border border-amber-600/50 px-3 py-1 rounded text-amber-200 text-xs shadow-md">
                         <span class="font-bold mr-1.5 text-amber-400">Objective:</span>
                         <span id="objective-text">Build Keep & Stockpile</span>
                     </div>
-                    <button onclick="GameApp.centerOnKeep()" class="parchment-button px-2.5 py-1.5 rounded text-xs font-bold" title="Center camera on Keep (Space)">Center Keep</button>
-                    <button onclick="GameApp.returnToMenu()" class="parchment-button bg-stone-800 hover:bg-stone-700 text-amber-200 px-3 py-1.5 rounded font-bold border border-stone-600">Main Menu</button>
+                    <button onclick="GameApp.devConsole.toggle()" class="parchment-button px-2.5 py-1.5 rounded text-xs font-bold flex items-center space-x-1" title="Toggle Developer Chat & Console (~)">
+                        <span>📜 Dev Chat</span>
+                    </button>
+                    <button onclick="GameApp.centerOnKeep()" class="parchment-button px-2.5 py-1.5 rounded text-xs font-bold" title="Center camera on Keep (Space)">Keep</button>
+                    <button onclick="GameApp.returnToMenu()" class="parchment-button bg-stone-800 hover:bg-stone-700 text-amber-200 px-3 py-1.5 rounded font-bold border border-stone-600">Menu</button>
                 </div>
             </div>
 
@@ -319,14 +326,43 @@
             </div>
         </div>
 
+        <!-- VICTORY MODAL -->
+        <div id="victory-modal" class="absolute inset-0 z-40 bg-stone-950/95 flex flex-col items-center justify-center p-6 hidden">
+            <div class="max-w-md w-full parchment-panel p-8 rounded-xl flex flex-col items-center text-center shadow-2xl border-2 border-amber-500">
+                <div class="text-5xl mb-3">&#127942;</div>
+                <h2 class="medieval-font text-3xl font-bold text-amber-400 mb-2">VICTORY ACHIEVED!</h2>
+                <p class="text-sm text-amber-200/80 mb-6">The rival fortress has fallen! Your banner flies triumphant over the Shattered Realms.</p>
+                <div id="victory-stats" class="bg-stone-900 border border-stone-800 p-4 rounded-lg w-full text-xs text-stone-300 space-y-1 mb-6 text-left"></div>
+                <div class="flex space-x-3 w-full">
+                    <button onclick="GameApp.returnToMenu()" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1 bg-stone-800">Main Menu</button>
+                    <button onclick="GameApp.returnToMenu()" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1 !bg-amber-600 hover:!bg-amber-500">Next Campaign</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- DEFEAT MODAL -->
+        <div id="defeat-modal" class="absolute inset-0 z-40 bg-stone-950/95 flex flex-col items-center justify-center p-6 hidden">
+            <div class="max-w-md w-full parchment-panel p-8 rounded-xl flex flex-col items-center text-center shadow-2xl border-2 border-red-600">
+                <div class="text-5xl mb-3">&#9760;</div>
+                <h2 class="medieval-font text-3xl font-bold text-red-500 mb-2">CITADEL DESTROYED</h2>
+                <p class="text-sm text-stone-300 mb-6">Sire, our Keep has fallen to the enemy siege. Our realm lies in ruins!</p>
+                <div class="flex space-x-3 w-full">
+                    <button onclick="GameApp.returnToMenu()" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1 bg-stone-800">Return to Menu</button>
+                    <button onclick="GameApp.launchSkirmish()" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1 !bg-red-800 hover:!bg-red-700">Try Again</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- GAME SCRIPTS LOADED IN DEPENDENCY ORDER -->
     <script src="js/config.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/economy.js"></script>
+    <script src="js/pathfinding.js"></script>
     <script src="js/entities.js"></script>
     <script src="js/renderer.js"></script>
+    <script src="js/devconsole.js"></script>
     <script src="js/game.js"></script>
 
 </body>

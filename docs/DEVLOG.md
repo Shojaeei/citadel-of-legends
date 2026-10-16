@@ -67,6 +67,12 @@ A thorough code review identified the following critical vulnerabilities and des
 5. **Multi-Unit Command & Box Selection:**
    - Ability to select individual or multiple units and issue coordinated attack/move orders.
 
+### Status: Complete & Verified
+- `js/pathfinding.js` successfully routes units around walls and across bridges.
+- `js/devconsole.js` live with `/gold`, `/spawn`, `/wave`, `/god`, `/win` and chat logging.
+- AI Lord siege waves active with automated countdown timer, rush wave button, and victory/defeat screens.
+- Automated headless test suite passing 100%.
+
 ---
 
 ## 💬 Development Chat Transcript & Decision Records

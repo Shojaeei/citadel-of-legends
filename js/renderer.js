@@ -216,9 +216,9 @@ class IsometricRenderer {
             ctx.save();
             ctx.beginPath();
             ctx.ellipse(screen.x, screen.y + 12, (b.w * this.tileW) * 0.45, (b.h * this.tileH) * 0.45, 0, 0, Math.PI * 2);
-            ctx.strokeStyle = '#fbbf24';
+            ctx.strokeStyle = b.isEnemy ? '#ef4444' : '#fbbf24';
             ctx.lineWidth = 3;
-            ctx.shadowColor = '#f59e0b';
+            ctx.shadowColor = b.isEnemy ? '#dc2626' : '#f59e0b';
             ctx.shadowBlur = 12;
             ctx.stroke();
             ctx.restore();
@@ -233,8 +233,13 @@ class IsometricRenderer {
         const cx = screen.x;
         const cy = screen.y;
 
+        // Color shading based on friendly vs hostile
+        const wallShadow = b.isEnemy ? '#450a0a' : b.type === 'keep' ? '#78350f' : b.type === 'wall' ? '#57534e' : '#451a03';
+        const wallMid = b.isEnemy ? '#7f1d1d' : b.type === 'keep' ? '#92400e' : b.type === 'wall' ? '#78716c' : '#713f12';
+        const wallTop = b.isEnemy ? '#991b1b' : b.type === 'keep' ? '#b45309' : b.type === 'wall' ? '#a8a29e' : '#a16207';
+
         // Left Face (Shadowed)
-        ctx.fillStyle = b.type === 'keep' ? '#78350f' : b.type === 'wall' ? '#57534e' : '#451a03';
+        ctx.fillStyle = wallShadow;
         ctx.beginPath();
         ctx.moveTo(cx - baseW, cy);
         ctx.lineTo(cx, cy + baseH);
@@ -245,7 +250,7 @@ class IsometricRenderer {
         ctx.stroke();
 
         // Right Face (Medium Shade)
-        ctx.fillStyle = b.type === 'keep' ? '#92400e' : b.type === 'wall' ? '#78716c' : '#713f12';
+        ctx.fillStyle = wallMid;
         ctx.beginPath();
         ctx.moveTo(cx, cy + baseH);
         ctx.lineTo(cx + baseW, cy);
@@ -256,7 +261,7 @@ class IsometricRenderer {
         ctx.stroke();
 
         // Top Roof / Walkway (Light Shade)
-        ctx.fillStyle = b.type === 'keep' ? '#b45309' : b.type === 'wall' ? '#a8a29e' : '#a16207';
+        ctx.fillStyle = wallTop;
         ctx.beginPath();
         ctx.moveTo(cx, cy - baseH - height + 10);
         ctx.lineTo(cx + baseW, cy - height);
@@ -269,7 +274,7 @@ class IsometricRenderer {
         // Architectural Details
         if (b.type === 'keep') {
             // Citadel Banner Pennant
-            ctx.fillStyle = '#ef4444';
+            ctx.fillStyle = b.isEnemy ? '#991b1b' : '#38bdf8';
             ctx.fillRect(cx - 3, cy - height - 16, 6, 16);
             ctx.beginPath();
             ctx.moveTo(cx + 3, cy - height - 16);
@@ -279,7 +284,7 @@ class IsometricRenderer {
             ctx.fill();
         } else if (b.type === 'tower') {
             // Conical Turret Roof
-            ctx.fillStyle = '#0284c7';
+            ctx.fillStyle = b.isEnemy ? '#7f1d1d' : '#0284c7';
             ctx.beginPath();
             ctx.moveTo(cx, cy - height - 20);
             ctx.lineTo(cx + baseW + 4, cy - height);
@@ -301,7 +306,7 @@ class IsometricRenderer {
         ctx.shadowBlur = 0;
         ctx.font = 'bold 11px Cinzel, serif';
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#fef3c7';
+        ctx.fillStyle = b.isEnemy ? '#f87171' : '#fef3c7';
         ctx.fillText(b.name, cx, cy - height - 8);
 
         // Health Bar if Damaged
@@ -315,7 +320,7 @@ class IsometricRenderer {
     drawUnit(u) {
         const ctx = this.ctx;
         const screen = this.worldToScreen(u.x, u.y);
-        const isSelected = this.game.selectedEntity === u;
+        const isSelected = this.game.selectedEntity === u || this.game.selectedUnits.includes(u);
 
         ctx.save();
 
@@ -330,7 +335,14 @@ class IsometricRenderer {
             ctx.beginPath();
             ctx.ellipse(screen.x, screen.y + 12, 12, 6, 0, 0, Math.PI * 2);
             ctx.strokeStyle = '#38bdf8';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+        } else if (u.isEnemy) {
+            // Hostile Red Indicator Ring
+            ctx.beginPath();
+            ctx.ellipse(screen.x, screen.y + 12, 9, 4.5, 0, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
+            ctx.lineWidth = 1.5;
             ctx.stroke();
         }
 

@@ -1,14 +1,15 @@
 /* ==========================================================================
-   Citadel of Legends: Shattered Realms - Main Game Controller
+   Citadel of Legends: Shattered Realms - Main Game Controller (Phase 2)
    ========================================================================== */
 
 class CitadelGame {
     constructor() {
-        this.state = 'menu'; // 'menu', 'playing'
+        this.state = 'menu'; // 'menu', 'playing', 'victory', 'defeat'
         this.faction = 'solaris';
         this.campaignMission = 1;
         this.mapType = 'valley';
         this.aiDifficulty = 'normal';
+        this.simSpeed = 1.0;
 
         this.gridSize = GAME_CONFIG.gridSize;
         this.map = [];
@@ -30,22 +31,37 @@ class CitadelGame {
         this.activeTab = 'building';
         this.selectedTool = null;
         this.selectedEntity = null;
+        this.selectedUnits = []; // Multi-unit selection
 
         this.economy = new EconomySystem(this);
+        this.pathfinding = new PathfindingEngine(this);
         this.renderer = null;
+        this.devConsole = null;
 
-        // Current Objective
+        // Current Objective & Missions
         this.currentMissionData = null;
         this.objectiveCompleted = false;
 
-        // Enemy Lord
+        // Enemy AI Lord & Siege Wave System
+        this.waveTimer = 60.0; // Seconds until next wave
+        this.waveInterval = 60.0;
+        this.currentWave = 0;
+        this.maxWaves = 4;
+        this.playerKeep = null;
         this.enemyKeep = null;
-        this.enemySpawnTimer = 0;
+
+        // Stats tracking
+        this.stats = {
+            enemiesKilled: 0,
+            buildingsConstructed: 0,
+            playTime: 0
+        };
     }
 
     init() {
         const canvas = document.getElementById('game-canvas');
         this.renderer = new IsometricRenderer(canvas, this);
+        this.devConsole = new DevConsole(this);
 
         this.setupCanvasResize();
         this.setupInputListeners();
@@ -71,7 +87,6 @@ class CitadelGame {
         let downClientX = 0;
         let downClientY = 0;
 
-        // Prevent standard context menu on right click inside canvas
         canvas.addEventListener('contextmenu', (e) => {
             e.preventDefault();
         });
@@ -86,7 +101,6 @@ class CitadelGame {
         });
 
         window.addEventListener('mousemove', (e) => {
-            // Update hover tile for renderer ghost
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
@@ -110,7 +124,6 @@ class CitadelGame {
             if (!this.camera.isDragging) return;
             this.camera.isDragging = false;
 
-            // Only trigger placement or selection if mouse did NOT drag
             if (!this.camera.hasDragged && e.target === canvas) {
                 const rect = canvas.getBoundingClientRect();
                 const screenX = e.clientX - rect.left;
@@ -118,27 +131,45 @@ class CitadelGame {
                 const worldCoord = this.renderer.screenToWorld(screenX, screenY);
 
                 if (e.button === 0) {
-                    // Left Click: Place Building or Select Entity
+                    // Left Click
                     if (this.selectedTool) {
                         this.tryPlaceBuilding(worldCoord.x, worldCoord.y);
                     } else {
                         this.selectEntityAt(worldCoord.x, worldCoord.y);
                     }
                 } else if (e.button === 2) {
-                    // Right Click: Cancel tool or issue unit order
+                    // Right Click: Cancel tool or issue orders to selected military units
                     if (this.selectedTool) {
                         this.clearSelectedTool();
                         Sound.playClick();
-                    } else if (this.selectedEntity && this.selectedEntity instanceof Unit && !this.selectedEntity.isEnemy) {
-                        // Check if targeting an enemy
+                    } else if (this.selectedUnits.length > 0) {
                         const target = this.findEntityAt(worldCoord.x, worldCoord.y);
                         if (target && target.isEnemy) {
-                            this.selectedEntity.attackTarget(target);
+                            // Attack target command
+                            this.selectedUnits.forEach(u => u.attackTarget(target, this));
+                            this.showToast(`Ordered ${this.selectedUnits.length} units to attack ${target.name}!`);
+                            Sound.playSwordClash();
+                        } else {
+                            // Move command with waypoint dispersion
+                            this.selectedUnits.forEach((u, i) => {
+                                const offsetAngle = (i / this.selectedUnits.length) * Math.PI * 2;
+                                const spread = this.selectedUnits.length > 1 ? 0.7 : 0;
+                                const tx = worldCoord.x + 0.5 + Math.cos(offsetAngle) * spread;
+                                const ty = worldCoord.y + 0.5 + Math.sin(offsetAngle) * spread;
+                                u.moveTo(tx, ty, this);
+                            });
+                            this.showToast(`Ordered ${this.selectedUnits.length} units to march`);
+                            Sound.playClick();
+                        }
+                    } else if (this.selectedEntity && this.selectedEntity instanceof Unit && !this.selectedEntity.isEnemy) {
+                        const target = this.findEntityAt(worldCoord.x, worldCoord.y);
+                        if (target && target.isEnemy) {
+                            this.selectedEntity.attackTarget(target, this);
                             this.showToast(`Unit ordered to attack ${target.name}!`);
                             Sound.playSwordClash();
                         } else {
-                            this.selectedEntity.moveTo(worldCoord.x + 0.5, worldCoord.y + 0.5);
-                            this.showToast(`Unit ordered to move to (${worldCoord.x}, ${worldCoord.y})`);
+                            this.selectedEntity.moveTo(worldCoord.x + 0.5, worldCoord.y + 0.5, this);
+                            this.showToast(`Unit moving to (${worldCoord.x}, ${worldCoord.y})`);
                             Sound.playClick();
                         }
                     }
@@ -146,7 +177,6 @@ class CitadelGame {
             }
         });
 
-        // Mouse Wheel Zoom
         canvas.addEventListener('wheel', (e) => {
             e.preventDefault();
             const zoomFactor = 1.12;
@@ -162,7 +192,10 @@ class CitadelGame {
         window.addEventListener('keydown', (e) => {
             if (this.state !== 'playing') return;
 
-            const panStep = 35;
+            // Don't trigger game hotkeys if user is typing in dev console
+            if (this.devConsole && this.devConsole.isOpen) return;
+
+            const panStep = 40;
             switch (e.key.toLowerCase()) {
                 case 'w':
                 case 'arrowup':
@@ -183,6 +216,7 @@ class CitadelGame {
                 case 'escape':
                     this.clearSelectedTool();
                     this.selectedEntity = null;
+                    this.selectedUnits = [];
                     document.getElementById('inspector-card').classList.add('hidden');
                     break;
                 case ' ':
@@ -205,7 +239,7 @@ class CitadelGame {
     }
 
     centerOnKeep() {
-        const keep = this.buildings.find(b => b.type === 'keep');
+        const keep = this.playerKeep || this.buildings.find(b => b.type === 'keep' && !b.isEnemy);
         if (keep) {
             const screen = this.renderer.worldToScreen(keep.gx + 1.5, keep.gy + 1.5);
             this.camera.x = -screen.x;
@@ -228,6 +262,10 @@ class CitadelGame {
     hideModals() {
         document.getElementById('campaign-modal').classList.add('hidden');
         document.getElementById('skirmish-modal').classList.add('hidden');
+        const vModal = document.getElementById('victory-modal');
+        if (vModal) vModal.classList.add('hidden');
+        const dModal = document.getElementById('defeat-modal');
+        if (dModal) dModal.classList.add('hidden');
         Sound.playClick();
     }
 
@@ -257,15 +295,24 @@ class CitadelGame {
         if (this.currentMissionData) {
             this.setObjective(this.currentMissionData.objective);
             this.showToast(`Campaign: ${this.currentMissionData.title}`);
+            if (this.devConsole) {
+                this.devConsole.log(`Started Campaign Mission: ${this.currentMissionData.title}`, 'HERALD');
+                this.devConsole.log(this.currentMissionData.dialogue, 'HERALD');
+            }
         }
 
         this.runGameLoop();
     }
 
     launchSkirmish() {
-        this.faction = document.getElementById('skirmish-faction').value;
-        this.mapType = document.getElementById('skirmish-map').value;
-        this.aiDifficulty = document.getElementById('skirmish-ai').value;
+        const fEl = document.getElementById('skirmish-faction');
+        this.faction = (fEl && fEl.value) ? fEl.value : (this.faction || 'solaris');
+
+        const mEl = document.getElementById('skirmish-map');
+        this.mapType = (mEl && mEl.value) ? mEl.value : (this.mapType || 'valley');
+
+        const aEl = document.getElementById('skirmish-ai');
+        this.aiDifficulty = (aEl && aEl.value) ? aEl.value : (this.aiDifficulty || 'normal');
         this.currentMissionData = null;
 
         this.hideModals();
@@ -276,8 +323,12 @@ class CitadelGame {
 
         this.state = 'playing';
         Sound.startAmbientMusic(this.faction);
-        this.setObjective("Build defenses, recruit forces, and vanquish the rival lord!");
+        this.setObjective("Destroy the rival enemy keep across the river to claim victory!");
         this.showToast("Skirmish Battle Commenced!");
+
+        if (this.devConsole) {
+            this.devConsole.log(`Skirmish launched. Faction: ${this.faction.toUpperCase()} | AI Difficulty: ${this.aiDifficulty.toUpperCase()}`, 'HERALD');
+        }
 
         this.runGameLoop();
     }
@@ -286,10 +337,11 @@ class CitadelGame {
         this.state = 'menu';
         document.getElementById('game-interface').classList.add('hidden');
         document.getElementById('main-menu').classList.remove('hidden');
+        this.hideModals();
         Sound.playClick();
     }
 
-    // --- World Initialization ---
+    // --- World & Castle Initialization ---
     initGameWorld(mapType) {
         this.mapType = mapType;
         this.buildings = [];
@@ -298,7 +350,12 @@ class CitadelGame {
         this.particles = [];
         this.selectedTool = null;
         this.selectedEntity = null;
+        this.selectedUnits = [];
         this.objectiveCompleted = false;
+
+        this.currentWave = 0;
+        this.waveTimer = this.aiDifficulty === 'hard' ? 45.0 : this.aiDifficulty === 'easy' ? 80.0 : 60.0;
+        this.stats = { enemiesKilled: 0, buildingsConstructed: 0, playTime: 0 };
 
         this.economy.reset(this.faction);
 
@@ -311,14 +368,14 @@ class CitadelGame {
                 if (mapType === 'tundra') type = 'snow';
                 if (mapType === 'wasteland') type = 'blight';
 
-                // Natural River
-                if (x >= 28 && x <= 32 && y >= 8 && y <= 56) {
+                // Natural River dividing West and East
+                if (x >= 29 && x <= 33 && y >= 6 && y <= 58) {
                     type = 'water';
                 }
 
                 // Rocky Outcrops
-                if ((x >= 8 && x <= 11 && y >= 14 && y <= 17) ||
-                    (x >= 45 && x <= 48 && y >= 40 && y <= 43)) {
+                if ((x >= 8 && x <= 11 && y >= 12 && y <= 15) ||
+                    (x >= 52 && x <= 55 && y >= 44 && y <= 47)) {
                     type = 'rock';
                 }
 
@@ -326,33 +383,45 @@ class CitadelGame {
             }
         }
 
-        // Bridge across river
-        for (let x = 28; x <= 32; x++) {
-            this.map[x][30].type = mapType === 'tundra' ? 'snow' : mapType === 'wasteland' ? 'blight' : 'grass';
-            this.map[x][31].type = mapType === 'tundra' ? 'snow' : mapType === 'wasteland' ? 'blight' : 'grass';
+        // Fortified River Bridge Crossing
+        for (let x = 29; x <= 33; x++) {
+            for (let y = 29; y <= 32; y++) {
+                this.map[x][y].type = mapType === 'tundra' ? 'snow' : mapType === 'wasteland' ? 'blight' : 'grass';
+            }
         }
 
-        // Spawn Starting Buildings
-        this.spawnBuilding('keep', 20, 28);
-        this.spawnBuilding('stockpile', 17, 28);
-        this.spawnBuilding('granary', 24, 28);
+        // Spawn Player Stronghold (Western Region)
+        this.playerKeep = this.spawnBuilding('keep', 18, 28, false, this.faction);
+        this.spawnBuilding('stockpile', 15, 28, false, this.faction);
+        this.spawnBuilding('granary', 22, 28, false, this.faction);
 
-        // Spawn Initial Peasants
+        // Spawn Starting Peasants
         for (let i = 0; i < 6; i++) {
             this.spawnPeasantAtKeep();
         }
 
-        // Camera center on Keep
-        this.centerOnKeep();
+        // Spawn Enemy AI Lord Fortress (Eastern Shore)
+        const enemyFaction = this.faction === 'obsidian' ? 'solaris' : 'obsidian';
+        this.enemyKeep = this.spawnBuilding('keep', 48, 28, true, enemyFaction);
+        this.enemyKeep.name = "Rival Dread Lord Keep";
+        this.spawnBuilding('tower', 44, 25, true, enemyFaction);
+        this.spawnBuilding('tower', 44, 33, true, enemyFaction);
+        this.spawnBuilding('barracks', 52, 28, true, enemyFaction);
 
+        // Enemy Initial Defenders
+        for (let i = 0; i < 4; i++) {
+            const defender = new Unit('halberdier', 45 + (Math.random() * 4), 28 + (Math.random() * 4 - 2), true, enemyFaction);
+            this.units.push(defender);
+        }
+
+        this.centerOnKeep();
         this.updateUI();
     }
 
-    spawnBuilding(type, gx, gy, isEnemy = false) {
-        const building = new Building(type, gx, gy, isEnemy, this.faction);
+    spawnBuilding(type, gx, gy, isEnemy = false, faction = 'solaris') {
+        const building = new Building(type, gx, gy, isEnemy, faction);
         this.buildings.push(building);
 
-        // Mark tiles as occupied
         for (let dx = 0; dx < building.w; dx++) {
             for (let dy = 0; dy < building.h; dy++) {
                 const tile = this.map[gx + dx]?.[gy + dy];
@@ -366,8 +435,8 @@ class CitadelGame {
     }
 
     spawnPeasantAtKeep() {
-        const keep = this.buildings.find(b => b.type === 'keep' && !b.isEnemy);
-        const startX = keep ? keep.gx + 1.5 + (Math.random() * 2 - 1) : 20;
+        const keep = this.playerKeep || this.buildings.find(b => b.type === 'keep' && !b.isEnemy);
+        const startX = keep ? keep.gx + 1.5 + (Math.random() * 2 - 1) : 18;
         const startY = keep ? keep.gy + 1.5 + (Math.random() * 2 - 1) : 28;
 
         const peasant = new Unit('peasant', startX, startY, false, this.faction);
@@ -382,14 +451,81 @@ class CitadelGame {
         }
     }
 
+    handleBuildingDestruction(b) {
+        Sound.playBuild();
+        this.spawnFloatingText(`DESTROYED!`, b.gx + b.w * 0.5, b.gy + b.h * 0.5, '#ef4444');
+
+        // Clear occupancy
+        for (let dx = 0; dx < b.w; dx++) {
+            for (let dy = 0; dy < b.h; dy++) {
+                const tile = this.map[b.gx + dx]?.[b.gy + dy];
+                if (tile) {
+                    tile.occupied = false;
+                    tile.buildingId = null;
+                }
+            }
+        }
+
+        // Remove from list
+        const idx = this.buildings.indexOf(b);
+        if (idx !== -1) {
+            this.buildings.splice(idx, 1);
+        }
+
+        // Check Keep destruction
+        if (b === this.playerKeep) {
+            this.triggerDefeat();
+        } else if (b === this.enemyKeep) {
+            this.triggerVictory();
+        }
+    }
+
+    // --- Wave Invasions & AI Lord ---
+    triggerEnemyWave() {
+        this.currentWave++;
+        this.waveTimer = this.aiDifficulty === 'hard' ? 45.0 : 60.0;
+
+        const enemyFaction = this.enemyKeep ? this.enemyKeep.faction : 'obsidian';
+        const spawnX = this.enemyKeep ? this.enemyKeep.gx : 48;
+        const spawnY = this.enemyKeep ? this.enemyKeep.gy : 28;
+
+        let troops = [];
+        if (this.currentWave === 1) {
+            troops = ['halberdier', 'halberdier', 'archer', 'archer'];
+        } else if (this.currentWave === 2) {
+            troops = ['halberdier', 'halberdier', 'archer', 'archer', 'catapult'];
+        } else if (this.currentWave === 3) {
+            troops = ['knight', 'knight', 'archer', 'archer', 'catapult', 'catapult'];
+        } else {
+            const mythicUnit = enemyFaction === 'frost' ? 'giant' : enemyFaction === 'obsidian' ? 'werewolf' : 'dragon';
+            troops = [mythicUnit, 'knight', 'knight', 'catapult', 'catapult', 'archer', 'archer'];
+        }
+
+        troops.forEach((uType, i) => {
+            setTimeout(() => {
+                const enemy = new Unit(uType, spawnX + (Math.random() * 2 - 1), spawnY + (Math.random() * 2 - 1), true, enemyFaction);
+                // Target player's keep
+                if (this.playerKeep) {
+                    enemy.attackTarget(this.playerKeep, this);
+                }
+                this.units.push(enemy);
+            }, i * 200);
+        });
+
+        this.showToast(`⚔️ INVASION! Wave ${this.currentWave} is marching across the river!`, true);
+        Sound.playDragonRoar();
+
+        if (this.devConsole) {
+            this.devConsole.log(`Enemy Siege Wave ${this.currentWave} dispatched (${troops.join(', ')})!`, 'AI LORD');
+        }
+    }
+
     // --- Placement Validation & Construction ---
     isValidPlacement(gx, gy, w, h) {
-        // Bounds check
         if (gx < 0 || gy < 0 || gx + w > this.gridSize || gy + h > this.gridSize) {
             return false;
         }
 
-        // Tile check
         for (let dx = 0; dx < w; dx++) {
             for (let dy = 0; dy < h; dy++) {
                 const tile = this.map[gx + dx]?.[gy + dy];
@@ -405,19 +541,16 @@ class CitadelGame {
         if (!this.selectedTool) return;
         const key = this.selectedTool;
 
-        // Check if tool is building or unit
         const bDef = BUILDINGS_DEF[key];
         const uDef = UNITS_DEF[key];
 
         if (bDef) {
-            // Validate Placement
             if (!this.isValidPlacement(gx, gy, bDef.w, bDef.h)) {
                 this.showToast('Invalid building site! Check obstacles or water.', true);
                 Sound.playWarning();
                 return;
             }
 
-            // Verify Resources
             if (!this.economy.canAfford(bDef.cost)) {
                 const missing = this.economy.getMissingResources(bDef.cost);
                 this.showToast(`Insufficient Resources! Need: ${missing.join(', ')}`, true);
@@ -425,9 +558,9 @@ class CitadelGame {
                 return;
             }
 
-            // Deduct and construct
             this.economy.deductCost(bDef.cost);
-            this.spawnBuilding(key, gx, gy, false);
+            this.spawnBuilding(key, gx, gy, false, this.faction);
+            this.stats.buildingsConstructed++;
             Sound.playBuild();
             this.spawnFloatingText(`+${bDef.name}`, gx + bDef.w / 2, gy + bDef.h / 2, '#22c55e');
             this.showToast(`Constructed ${bDef.name}`);
@@ -443,14 +576,12 @@ class CitadelGame {
         const def = UNITS_DEF[unitKey];
         if (!def) return;
 
-        // Check Housing Capacity
         if (this.economy.pop.current >= this.economy.pop.max) {
             this.showToast('Cannot train: Housing capacity reached! Build Hovels.', true);
             Sound.playWarning();
             return;
         }
 
-        // Check Full Resources Cost
         if (!this.economy.canAfford(def.cost)) {
             const missing = this.economy.getMissingResources(def.cost);
             this.showToast(`Insufficient Resources! Need: ${missing.join(', ')}`, true);
@@ -458,14 +589,12 @@ class CitadelGame {
             return;
         }
 
-        // Deduct and Recruit
         this.economy.deductCost(def.cost);
         this.economy.pop.current++;
 
-        // Find Barracks or Keep to spawn unit
-        const rallyBuilding = this.buildings.find(b => b.type === 'barracks' || b.type === 'archery' || b.type === 'dragonRoost') ||
-                              this.buildings.find(b => b.type === 'keep');
-        const spawnX = rallyBuilding ? rallyBuilding.gx + rallyBuilding.w / 2 : 20;
+        const rallyBuilding = this.buildings.find(b => !b.isEnemy && (b.type === 'barracks' || b.type === 'archery' || b.type === 'dragonRoost')) ||
+                              this.playerKeep || this.buildings[0];
+        const spawnX = rallyBuilding ? rallyBuilding.gx + rallyBuilding.w / 2 : 18;
         const spawnY = rallyBuilding ? rallyBuilding.gy + rallyBuilding.h / 2 : 28;
 
         const unit = new Unit(unitKey, spawnX, spawnY, false, this.faction);
@@ -486,11 +615,8 @@ class CitadelGame {
 
     // --- Entity Selection & Inspection ---
     findEntityAt(gx, gy) {
-        // Unit check first
         const unit = this.units.find(u => Math.hypot(u.x - (gx + 0.5), u.y - (gy + 0.5)) < 1.2);
         if (unit) return unit;
-
-        // Building check
         return this.buildings.find(b => b.containsTile(gx, gy));
     }
 
@@ -500,8 +626,14 @@ class CitadelGame {
 
         if (entity) {
             this.selectedEntity = entity;
+            if (entity instanceof Unit && !entity.isEnemy) {
+                this.selectedUnits = [entity];
+            } else {
+                this.selectedUnits = [];
+            }
+
             card.classList.remove('hidden');
-            document.getElementById('inspector-title').innerText = entity.name;
+            document.getElementById('inspector-title').innerText = `${entity.name} ${entity.isEnemy ? '(Hostile)' : ''}`;
 
             const def = BUILDINGS_DEF[entity.type] || UNITS_DEF[entity.type];
             document.getElementById('inspector-desc').innerText = def?.desc || '';
@@ -511,12 +643,13 @@ class CitadelGame {
                 statsHtml += `
                     <div>Attack: <span class="font-bold text-amber-300">${entity.atk}</span> &bull; Range: ${entity.range}</div>
                     <div>State: <span class="font-bold text-emerald-400 capitalize">${entity.state}</span></div>
-                    <div class="text-[10px] text-stone-400 mt-1 italic">Right-click ground to move or enemy to attack.</div>
+                    <div class="text-[10px] text-stone-400 mt-1 italic">Right-click ground to march or enemy to attack.</div>
                 `;
             } else if (entity instanceof Building) {
-                statsHtml += `
-                    <div>Footprint: ${entity.w}&times;${entity.h}</div>
-                `;
+                statsHtml += `<div>Footprint: ${entity.w}&times;${entity.h}</div>`;
+                if (entity.isTower) {
+                    statsHtml += `<div class="text-sky-300 font-bold">Watchtower Garrison: Automated Arrow Volleys</div>`;
+                }
                 if (def.producer) {
                     statsHtml += `<div>Production: <span class="font-bold text-emerald-400">+${def.rate} ${def.producer.toUpperCase()}/s</span></div>`;
                 }
@@ -526,6 +659,7 @@ class CitadelGame {
             Sound.playClick();
         } else {
             this.selectedEntity = null;
+            this.selectedUnits = [];
             card.classList.add('hidden');
         }
     }
@@ -546,7 +680,7 @@ class CitadelGame {
         let completed = true;
         if (this.currentMissionData.reqBuildings) {
             for (const bType of this.currentMissionData.reqBuildings) {
-                if (!this.buildings.some(b => b.type === bType)) {
+                if (!this.buildings.some(b => b.type === bType && !b.isEnemy)) {
                     completed = false;
                     break;
                 }
@@ -555,7 +689,7 @@ class CitadelGame {
 
         if (completed && this.currentMissionData.reqUnits) {
             for (const [uType, count] of Object.entries(this.currentMissionData.reqUnits)) {
-                const currentCount = this.units.filter(u => u.type === uType).length;
+                const currentCount = this.units.filter(u => u.type === uType && !u.isEnemy).length;
                 if (currentCount < count) {
                     completed = false;
                     break;
@@ -565,15 +699,50 @@ class CitadelGame {
 
         if (completed) {
             this.objectiveCompleted = true;
-            this.economy.res.honor += 25;
-            this.economy.res.gold += 100;
-            this.showToast(`🎉 Objective Complete! +25 Honor, +100 Gold`);
+            this.economy.res.honor += 30;
+            this.economy.res.gold += 150;
+            this.showToast(`🎉 Objective Complete! +30 Honor, +150 Gold`);
             Sound.playCheer();
             this.setObjective(`COMPLETED: ${this.currentMissionData.title}`);
+
+            if (this.devConsole) {
+                this.devConsole.log(`Mission Objective Completed: ${this.currentMissionData.title}!`, 'HERALD');
+            }
         }
     }
 
-    // --- Particle & Projectile Spawners ---
+    // --- Victory & Defeat Modals ---
+    triggerVictory() {
+        this.state = 'victory';
+        Sound.playCheer();
+        const vModal = document.getElementById('victory-modal');
+        if (vModal) {
+            vModal.classList.remove('hidden');
+            document.getElementById('victory-stats').innerHTML = `
+                <div>Play Time: ${Math.floor(this.stats.playTime)} seconds</div>
+                <div>Enemies Slain: ${this.stats.enemiesKilled}</div>
+                <div>Structures Erected: ${this.stats.buildingsConstructed}</div>
+                <div>Final Popularity: ${this.economy.popularity}%</div>
+            `;
+        }
+        if (this.devConsole) {
+            this.devConsole.log("VICTORY! The Citadel has triumphed over its rivals!", 'HERALD');
+        }
+    }
+
+    triggerDefeat() {
+        this.state = 'defeat';
+        Sound.playWarning();
+        const dModal = document.getElementById('defeat-modal');
+        if (dModal) {
+            dModal.classList.remove('hidden');
+        }
+        if (this.devConsole) {
+            this.devConsole.log("DEFEAT: Your Citadel Keep has fallen!", 'AI LORD');
+        }
+    }
+
+    // --- Particles & Projectiles ---
     spawnFloatingText(text, gx, gy, color = '#fef3c7') {
         const particle = new Particle(gx, gy, text, color);
         this.particles.push(particle);
@@ -709,6 +878,12 @@ class CitadelGame {
             statusEl.innerText = 'Revolting';
             statusEl.className = 'text-red-500 font-bold';
         }
+
+        // Wave HUD Countdown
+        const waveEl = document.getElementById('wave-countdown');
+        if (waveEl) {
+            waveEl.innerText = `Wave ${this.currentWave + 1} in: ${Math.ceil(this.waveTimer)}s`;
+        }
     }
 
     // --- Main Game Loop ---
@@ -717,8 +892,9 @@ class CitadelGame {
 
         const loop = (time) => {
             if (this.state !== 'playing') return;
-            const dt = Math.min((time - lastTime) / 1000, 0.1);
+            const rawDt = Math.min((time - lastTime) / 1000, 0.1);
             lastTime = time;
+            const dt = rawDt * this.simSpeed;
 
             this.update(dt);
             this.renderer.render();
@@ -727,26 +903,44 @@ class CitadelGame {
                 requestAnimationFrame(loop);
             }
         };
+
         if (typeof requestAnimationFrame !== 'undefined') {
             requestAnimationFrame(loop);
         }
     }
 
     update(dt) {
-        // 1. Update Economy
+        this.stats.playTime += dt;
+
+        // 1. Update Wave Timer & Siege Invasions
+        this.waveTimer -= dt;
+        if (this.waveTimer <= 0) {
+            this.triggerEnemyWave();
+        }
+
+        // 2. Update Economy
         this.economy.update(dt);
 
-        // 2. Update Units
+        // 3. Update Defensive Buildings (e.g. Watchtowers)
+        this.buildings.forEach(b => {
+            if (b.update) b.update(dt, this);
+        });
+
+        // 4. Update Units
         for (let i = this.units.length - 1; i >= 0; i--) {
             const u = this.units[i];
             u.update(dt, this);
             if (u.hp <= 0) {
+                if (u.isEnemy) {
+                    this.stats.enemiesKilled++;
+                    this.economy.res.gold += 12; // Gold bounty for defeating enemy
+                }
                 this.units.splice(i, 1);
-                this.spawnFloatingText("Dead", u.x, u.y, '#991b1b');
+                this.spawnFloatingText("Slain", u.x, u.y, '#991b1b');
             }
         }
 
-        // 3. Update Projectiles
+        // 5. Update Projectiles
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const p = this.projectiles[i];
             if (p.update(dt, this)) {
@@ -754,13 +948,16 @@ class CitadelGame {
             }
         }
 
-        // 4. Update Particles
+        // 6. Update Particles
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const part = this.particles[i];
             if (part.update(dt)) {
                 this.particles.splice(i, 1);
             }
         }
+
+        // Update UI every tick
+        this.updateUI();
     }
 }
 
