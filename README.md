@@ -30,7 +30,7 @@
 ## 🎮 How to Play
 
 ### Quick Start
-1. Simply double-click [`index.html`](file:///d:/Citadel%20of%20Legends/index.html) (or [`citadel_of_legends_shattered_realms.html`](file:///d:/Citadel%20of%20Legends/citadel_of_legends_shattered_realms.html)) in any browser (Chrome, Edge, Firefox, Safari).
+1. Simply double-click [`index.html`](file:///d:/Citadel%20of%20Legends/index.html) in any browser (Chrome, Edge, Firefox, Safari).
 2. Alternatively, start a lightweight local web server:
    ```bash
    python -m http.server 8080
@@ -56,8 +56,7 @@
 
 ```
 d:/Citadel of Legends/
-├── index.html                           # Primary modern game entry point
-├── citadel_of_legends_shattered_realms.html # Synced backward-compatible entry point
+├── index.html                           # Primary game entry point
 ├── css/
 │   └── style.css                        # Parchment UI styling, Tailwind hooks, animations
 ├── js/
