@@ -73,14 +73,25 @@ class CitadelGame {
         this.setTab('building');
     }
 
+    resizeCanvas() {
+        if (!this.renderer || !this.renderer.canvas) return;
+        const canvas = this.renderer.canvas;
+        const parent = canvas.parentElement;
+        if (parent && parent.clientWidth > 0 && parent.clientHeight > 0) {
+            if (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight) {
+                canvas.width = parent.clientWidth;
+                canvas.height = parent.clientHeight;
+            }
+        }
+    }
+
     setupCanvasResize() {
-        const resize = () => {
-            const canvas = this.renderer.canvas;
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
-        };
+        const resize = () => this.resizeCanvas();
         window.addEventListener('resize', resize);
-        resize();
+        this.resizeCanvas();
+        if (typeof ResizeObserver !== 'undefined' && this.renderer && this.renderer.canvas && this.renderer.canvas.parentElement) {
+            new ResizeObserver(() => this.resizeCanvas()).observe(this.renderer.canvas.parentElement);
+        }
     }
 
     setupInputListeners() {
@@ -152,7 +163,7 @@ class CitadelGame {
                         if (!u.isEnemy && !u.isWorker) {
                             const screen = this.renderer.worldToScreen(u.x, u.y);
                             const pixelX = this.renderer.canvas.width / 2 + this.camera.x + screen.x * this.camera.zoom;
-                            const pixelY = 120 + this.camera.y + screen.y * this.camera.zoom;
+                            const pixelY = this.renderer.canvas.height / 2 + this.camera.y + screen.y * this.camera.zoom;
                             if (pixelX >= bx && pixelX <= bx + bw && pixelY >= by && pixelY <= by + bh) {
                                 selected.push(u);
                             }
@@ -338,6 +349,9 @@ class CitadelGame {
         document.getElementById('main-menu').classList.add('hidden');
         document.getElementById('game-interface').classList.remove('hidden');
 
+        this.resizeCanvas();
+        this.centerOnKeep();
+
         this.state = 'playing';
         Sound.startAmbientMusic(this.faction);
 
@@ -369,6 +383,9 @@ class CitadelGame {
 
         document.getElementById('main-menu').classList.add('hidden');
         document.getElementById('game-interface').classList.remove('hidden');
+
+        this.resizeCanvas();
+        this.centerOnKeep();
 
         this.state = 'playing';
         Sound.startAmbientMusic(this.faction);
@@ -1057,6 +1074,7 @@ class CitadelGame {
     }
 
     update(dt) {
+        this.resizeCanvas();
         this.stats.playTime += dt;
 
         // 1. Update Wave Timer & Siege Invasions

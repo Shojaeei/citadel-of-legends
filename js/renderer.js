@@ -23,7 +23,7 @@ class IsometricRenderer {
 
     screenToWorld(screenX, screenY) {
         const localX = (screenX - this.canvas.width / 2 - this.game.camera.x) / this.game.camera.zoom;
-        const localY = (screenY - 120 - this.game.camera.y) / this.game.camera.zoom;
+        const localY = (screenY - this.canvas.height / 2 - this.game.camera.y) / this.game.camera.zoom;
 
         const gx = Math.floor((localX / (this.tileW / 2) + localY / (this.tileH / 2)) / 2);
         const gy = Math.floor((localY / (this.tileH / 2) - localX / (this.tileW / 2)) / 2);
@@ -47,7 +47,7 @@ class IsometricRenderer {
 
         ctx.save();
         // Camera Transform
-        ctx.translate(w / 2 + this.game.camera.x, 120 + this.game.camera.y);
+        ctx.translate(w / 2 + this.game.camera.x, h / 2 + this.game.camera.y);
         ctx.scale(this.game.camera.zoom, this.game.camera.zoom);
 
         // 1. Render Terrain Tiles
@@ -91,8 +91,8 @@ class IsometricRenderer {
         // Viewport bounds calculation for accurate frustum culling
         const viewMinX = -this.canvas.width / (2 * this.game.camera.zoom) - this.game.camera.x / this.game.camera.zoom - 100;
         const viewMaxX = this.canvas.width / (2 * this.game.camera.zoom) - this.game.camera.x / this.game.camera.zoom + 100;
-        const viewMinY = -120 / this.game.camera.zoom - this.game.camera.y / this.game.camera.zoom - 100;
-        const viewMaxY = (this.canvas.height - 120) / this.game.camera.zoom - this.game.camera.y / this.game.camera.zoom + 100;
+        const viewMinY = -this.canvas.height / (2 * this.game.camera.zoom) - this.game.camera.y / this.game.camera.zoom - 100;
+        const viewMaxY = this.canvas.height / (2 * this.game.camera.zoom) - this.game.camera.y / this.game.camera.zoom + 100;
 
         for (let x = 0; x < gridSize; x++) {
             for (let y = 0; y < gridSize; y++) {
