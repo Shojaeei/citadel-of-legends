@@ -26,11 +26,20 @@ flowchart TD
         Entities["Entity Manager (js/entities.js)"]
         AI["AI Lord Siege Controller"]
         DevChat["Developer Console (js/devconsole.js)"]
+        Spatial["SpatialHash (js/spatial.js)"]
+        Fog["FogOfWar (js/fog.js)"]
+        Camp["CampaignDirector (js/campaign.js)"]
+        Save["SaveSystem (js/save_system.js)"]
+        Settings["SettingsManager (js/settings.js)"]
+        Money["Monetization (js/monetization.js)"]
     end
 
     subgraph GraphicsAudio ["Presentation Layer"]
         IsoRenderer["IsometricRenderer (js/renderer.js)"]
         Synth["SoundEngine (js/audio.js)"]
+        FX["FxSystem (js/fx.js)"]
+        Radar["Minimap (js/minimap.js)"]
+        Touch["TouchController (js/touch.js)"]
     end
 
     DOM <--> GameApp
@@ -93,7 +102,7 @@ To ensure that tall isometric structures (such as the 3-story Citadel Keep, watc
 
 ## 4. Economy & Population Lifecycle
 
-The simulation runs a decoupled fixed-rate tick ($1.0\text{ s}$) inside [`js/economy.js`](file:///d:/Citadel%20of%20Legends/js/economy.js):
+The simulation runs a decoupled fixed-rate tick ($1.0\text{ s}$) inside [`js/economy.js`](../js/economy.js):
 
 ```mermaid
 sequenceDiagram
@@ -125,7 +134,7 @@ sequenceDiagram
 
 ## 5. Procedural Web Audio Engine
 
-The sound system ([`js/audio.js`](file:///d:/Citadel%20of%20Legends/js/audio.js)) requires no external `.mp3` or `.wav` sound files:
+The sound system ([`js/audio.js`](../js/audio.js)) requires no external `.mp3` or `.wav` sound files:
 - **Tone Generators:** Dual and triple oscillators with `exponentialRampToValueAtTime` curves for musical harmonics.
 - **Noise Buffers:** Generated white noise filtered through resonant bandpass filters for sword clashes and weapon impacts.
 - **Ambient Themes:** Procedural arpeggiators cycling through harmonic minor (Obsidian), pentatonic major (Solaris), and dorian/minor (Frostbound) scales every 2.8 seconds.
@@ -171,3 +180,81 @@ $$P_y = \text{offsetY} + \text{camera.y} + \text{screenY} \cdot \text{zoom}$$
 
 When $P_x \in [b_x, b_x + b_w]$ and $P_y \in [b_y, b_y + b_h]$, the unit is enqueued into `game.selectedUnits` (filtering out civilian worker peasants).
 
+
+
+---
+
+## 8. Main Loop & Simulation Step (v1.0)
+
+A **single** `requestAnimationFrame` loop is started once in `CitadelGame.init()` and lives for the whole session (earlier builds started a new loop per mission, which stacked loops and multiplied game speed).
+
+```
+frame(realDt):
+  if simulation running (playing, speed > 0, no briefing / menu / ad):
+      remaining = realDt * simSpeed            # speeds 0x, 1x, 2x, 5x
+      while remaining > 0 (max 6 sub-steps):   # 50 ms max step keeps combat stable at 5x
+          update(min(remaining, 0.05))
+  touch.update(realDt)                         # joystick pans in real time
+  renderer.render(); minimap.render() (every 2nd frame)
+```
+
+`update(dt)` order: rebuild spatial hash → wave timer & spawn queue → economy (fixed 1 s ticks with catch-up) → buildings (towers, auras, cauldrons) → units → deaths → projectiles → floating text & FX → fog of war (4 Hz) → wave completion → objectives (2 Hz) → auto-save timer → monetization cooldowns → HUD (throttled to ~7 Hz; DOM writes skipped when unchanged).
+
+## 9. Spatial Hash Grid (`js/spatial.js`)
+
+Uniform grid with 4-tile buckets, rebuilt every step in $\mathcal{O}(N)$. Radius queries visit only the $\lceil 2r/4 \rceil^2$ buckets that intersect the query circle, so aggro scans, tower targeting, splash damage, healing auras and flame patches are $\mathcal{O}(1)$ on average instead of $\mathcal{O}(N)$. `queryUnitsNear()` falls back to a linear scan when no hash exists (lightweight test doubles).
+
+**Measured:** 260 units simulate in ~0.2 ms/step (Node, `tests/test_runner.js` §19). In headless Chromium with *software* rasterization, a full 1080p frame with 270 units renders in ~5–8 ms after terrain caching (see §13).
+
+## 10. A* Pathfinding v2
+
+* Binary min-heap open set with lazy decrease-key (stale entries skipped via the closed set).
+* Octile heuristic (admissible and consistent for 8-way movement with $\sqrt2$ diagonals).
+* `game.buildingIndex: Map<id, Building>` makes occupancy checks $\mathcal{O}(1)$.
+* Blocked targets resolve to the nearest passable tile within 3 rings; sealed targets return a path to the **closest reachable tile**, after which the unit's siege logic breaches the nearest hostile structure (`Unit.findBlockingStructure`).
+
+## 11. Fog of War (`js/fog.js`)
+
+Two `Uint8Array(64×64)` layers (`explored`, `visible`) and a `Float32Array` shade layer. Vision is recomputed at 4 Hz from friendly sources (Keep 12, tower 10, other buildings 4, units 5, flyers 7). Raw shade (0 visible / 0.55 explored / 0.94 unexplored) receives one 3×3 box blur for soft edges; displayed shade eases toward the target each frame. Explored state is saved as run-length-encoded text.
+
+## 12. Persistence (`js/save_system.js`)
+
+```json
+{ "format": "citadel-of-legends-save", "schema": 1, "gameVersion": "1.0.0",
+  "game": { "faction", "mapType", "aiDifficulty", "missionId", "elapsed", "tick", "stats", ... },
+  "economy": { "res", "pop", "popularity", "rations", "taxes" },
+  "map": { "size": 64, "tiles": "<4096 chars: g w r s b>" },
+  "fog": { "enabled", "explored": "<RLE>" },
+  "buildings": [{ "id", "type", "gx", "gy", "hp", "maxHp", "level", "isUnderConstruction", "isEnemy", "tag" }],
+  "units": [{ "id", "type", "x", "y", "hp", "maxHp", "faction", "isEnemy", "state", "targetId", "path" }],
+  "waves": { "timer", "current", "tier", "slain", "spawnQueue", "activeWaves" },
+  "campaign": { mission telemetry }, "nextEntityId": 1234 }
+```
+
+**Trust boundary:** imported files are untrusted. `SaveSystem.validate()` checks format/schema, whitelists every building/unit type against the definitions, bounds-checks coordinates, rejects duplicate ids and oversize payloads (2 MB, 2,000 entities), and only known fields are copied (no object spreading of user data → no prototype pollution). Target references are re-linked by id after load, and the global entity id counter is advanced past the highest loaded id.
+
+## 13. Rendering Optimisations
+
+* **Ground layer cache:** terrain is baked once per map into an offscreen canvas; fog is composited onto a second layer at 10 Hz; each frame performs a single viewport-clipped `drawImage` (terrain cost 9.0 ms → 2.4 ms in software rendering).
+* **Labels on demand:** building names render for keeps, selection, hover or zoom ≥ 1.6.
+* **Particle caps & adaptive quality:** combat FX capped at 500, flame patches at 24; weather density drops automatically when the smoothed FPS falls below 40.
+
+## 14. Campaign Director (`js/campaign.js`)
+
+Missions are pure data in `CAMPAIGN_MISSIONS` (`config.js`): `objectives[]` (`buildings`, `buildingCount`, `population`, `resource`, `produced`, `trained`, `wavesSurvived`, `destroyEnemyKeep`, `destroyBuildingType`, `killGeneral`), one `bonus` (`noStarvation`, `structuresStanding`, `generalSlainBy`, `noBuild`, `regionKills`, `timeLimit`, `minTax`, `lifesteal`, `destroyAllTagged`), wave config and scripted structures. The director collects telemetry via hooks (production, recruits, builds, kills with attacker attribution, starvation, tax changes, lifesteal) and evaluates objectives twice per second. Progress/unlocks persist under `citadel.campaign.progress`.
+
+## 15. Monetization & Distribution
+
+* `js/monetization.js` exposes a facade over portal adapters (`none`, `itch`, `desktop` → no ads; `crazygames`, `poki`, `gamedistribution` → SDK). Portal is chosen by `window.CITADEL_PORTAL` (injected by the release packager), `?portal=` or hostname. SDK scripts are injected only for ad portals. Ads pause the simulation and mute audio.
+* `scripts/build_web_release.js` produces reproducible ZIPs (fixed timestamps, own DEFLATE writer in `scripts/zip.js`) for web/itch, CrazyGames, Poki and the marketing website.
+* `desktop/` wraps the same files in Electron: custom privileged `app://` scheme, CSP on every response, sandbox + context isolation, no Node in the renderer, navigation/popup/permission lockdown. Security helpers live in `desktop/security.js` and are unit-tested.
+* `sw.js` precaches the full game shell; it never intercepts cross-origin (ad SDK) requests.
+
+## 16. Quality Gates
+
+| Gate | Command | Scope |
+| :--- | :--- | :--- |
+| Unit & integration | `npm test` | 340 assertions: engine, gameplay, campaign, persistence, perf, monetization, packaging, legal & marketing assets |
+| Browser E2E | `npm run test:e2e` | Real Chromium: menus, briefing, build via UI, minimap, speed, save→reload→load, settings persistence, offline PWA, mobile touch, marketing site |
+| CI | `.github/workflows/ci.yml` | Both suites + release build on every push/PR |
+| Release | `.github/workflows/release.yml` | On `v*` tags: web bundles + Windows/macOS/Linux installers → GitHub Release |
