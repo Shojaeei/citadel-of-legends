@@ -16,6 +16,36 @@ class EconomySystem {
         this.foodWarningIssued = false;
     }
 
+    serialize() {
+        return {
+            res: { ...this.res },
+            pop: { ...this.pop },
+            popularity: this.popularity,
+            rations: this.rations,
+            taxes: this.taxes,
+            accumulatedTime: this.accumulatedTime,
+            tickCount: this.tickCount || 0
+        };
+    }
+
+    deserialize(data) {
+        const num = (v, lo, hi, d) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
+        if (!data || typeof data !== 'object') return false;
+        const res = data.res || {};
+        for (const k of Object.keys(GAME_CONFIG.startingResources)) {
+            this.res[k] = num(res[k], 0, 1e7, this.res[k]);
+        }
+        const pop = data.pop || {};
+        this.pop.current = Math.round(num(pop.current, 0, 5000, this.pop.current));
+        this.pop.max = Math.round(num(pop.max, 0, 5000, this.pop.max));
+        this.popularity = num(data.popularity, 0, 100, this.popularity);
+        this.rations = Math.round(num(data.rations, 0, 3, 2));
+        this.taxes = Math.round(num(data.taxes, -2, 3, 0));
+        this.accumulatedTime = num(data.accumulatedTime, 0, 1, 0);
+        this.tickCount = Math.round(num(data.tickCount, 0, 1e9, 0));
+        return true;
+    }
+
     reset(faction = 'solaris') {
         this.res = { ...GAME_CONFIG.startingResources };
         this.pop = { ...GAME_CONFIG.startingPopulation };
@@ -23,6 +53,7 @@ class EconomySystem {
         this.rations = 2;
         this.taxes = 0;
         this.accumulatedTime = 0;
+        this.tickCount = 0;
         this.foodWarningIssued = false;
     }
 
@@ -60,7 +91,9 @@ class EconomySystem {
 
     update(dt) {
         this.accumulatedTime += dt;
-        if (this.accumulatedTime >= this.economyTickInterval) {
+        // Catch up on multiple ticks at high game speeds (5x) without drift.
+        let guard = 0;
+        while (this.accumulatedTime >= this.economyTickInterval && guard++ < 10) {
             this.accumulatedTime -= this.economyTickInterval;
             this.tickEconomy();
         }
@@ -68,19 +101,28 @@ class EconomySystem {
 
     tickEconomy() {
         const factionData = FACTIONS_DEF[this.game.faction] || FACTIONS_DEF.solaris;
+        this.tickCount = (this.tickCount || 0) + 1;
         const bonuses = factionData.bonuses || {};
 
         // 1. Calculate Housing Capacity
         let hovelCount = 0;
         this.game.buildings.forEach(b => {
-            if (b.type === 'hovel') hovelCount++;
+            if (b.type === 'hovel' && !b.isEnemy) hovelCount++;
         });
         this.pop.max = 15 + (hovelCount * 5);
 
         // 2. Resource Production from Buildings
+        const campaign = this.game.campaign;
+        const produce = (res, amount) => {
+            if (this.res[res] === undefined || amount <= 0) return;
+            this.res[res] += amount;
+            if (campaign) campaign.recordProduction(res, amount);
+        };
         this.game.buildings.forEach(b => {
+            if (b.isEnemy || b.hp <= 0) return;
             const def = BUILDINGS_DEF[b.type];
-            if (def && def.producer && def.rate) {
+            if (!def) return;
+            if (def.producer && def.rate) {
                 let production = def.rate;
 
                 // Apply Faction Bonuses
@@ -93,11 +135,12 @@ class EconomySystem {
                 } else if (def.producer === 'food' && bonuses.foodRateMultiplier) {
                     production *= bonuses.foodRateMultiplier;
                 }
-
-                if (this.res[def.producer] !== undefined) {
-                    this.res[def.producer] += production;
-                }
+                produce(def.producer, production);
             }
+            // Sacred / unholy faction monuments generate Arcane Honor (+2/s);
+            // the Blood Crucible also transmutes darkness into pitch (+4/s).
+            if (def.isCathedral || def.isRunestone || def.isCrucible) produce('honor', 2);
+            if (def.isCrucible) produce('pitch', 4);
         });
 
         // 3. Food Consumption & Rations
@@ -118,6 +161,7 @@ class EconomySystem {
             // Starvation!
             this.res.food = 0;
             foodDeltaPop = -15;
+            if (this.pop.current > 0 && this.game.campaign) this.game.campaign.recordStarvation();
             if (!this.foodWarningIssued) {
                 this.game.showToast("⚠️ Granary empty! Peasants are starving!", true);
                 Sound.playWarning();
@@ -162,6 +206,7 @@ class EconomySystem {
                 break;
         }
         this.res.gold += taxGoldIncome;
+        if (this.game.campaign) this.game.campaign.recordTax(this.taxes);
 
         // 5. Update Popularity
         // Slight drift towards 75 if balanced
@@ -170,13 +215,17 @@ class EconomySystem {
         this.popularity = Math.round(this.popularity * 0.85 + targetPop * 0.15);
 
         // 6. Peasant Immigration / Emigration
+        // Arrival probability scales with how far popularity exceeds 70, so a
+        // thriving citadel (90+) attracts settlers noticeably faster.
         if (this.popularity >= 70 && this.pop.current < this.pop.max) {
-            // New peasant arrives
-            if (Math.random() < 0.35) {
-                this.pop.current++;
-                this.game.spawnPeasantAtKeep();
-                this.game.showToast("A new peasant has arrived at the Keep!");
-                Sound.playCheer();
+            const chance = Math.min(0.95, 0.35 + (this.popularity - 70) / 50);
+            const arrivals = this.popularity >= 90 && this.pop.max - this.pop.current >= 2 ? 2 : 1;
+            for (let i = 0; i < arrivals; i++) {
+                if (this.pop.current < this.pop.max && Math.random() < chance) {
+                    this.pop.current++;
+                    this.game.spawnPeasantAtKeep();
+                    if (i === 0) this.game.showToast("A new peasant has arrived at the Keep!");
+                }
             }
         } else if (this.popularity < 30 && this.pop.current > 3) {
             // Peasant abandons castle

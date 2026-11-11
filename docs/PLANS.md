@@ -1,7 +1,7 @@
 # Master Plans & Execution Roadmap: Citadel of Legends
 
 > **Document Version:** 1.0.0  
-> **Status:** Active Roadmap & Agent Handoff Specification  
+> **Status:** v1.0.0 Gold Master delivered — see Delivery Status below  
 > **Repository:** [https://github.com/Shojaeei/citadel-of-legends](https://github.com/Shojaeei/citadel-of-legends)  
 > **Engine:** Zero-dependency HTML5 Canvas 2D + Web Audio API  
 
@@ -14,6 +14,26 @@ This document defines the complete end-to-end master execution plan for **Citade
 The next operational objective is twofold:
 1. **Track 1: Gameplay Engine & Feature Completion (v1.0 Gold Master)** — Elevate the technical simulation into a fully featured, commercial-grade RTS with radar minimap, fog of war, full save/load state persistence, 9 narrative campaign missions, weather FX, and extended test coverage.
 2. **Track 2: Commercial Business & Go-To-Market Infrastructure** — Build and launch the commercial distribution, monetization, marketing landing page, press kit, multi-platform packaging (PWA, Desktop, Web Portals), and legal compliance suite so the project can operate autonomously as a profitable indie gaming business.
+
+---
+
+## ✅ Delivery Status (v1.0.0 — 2026-11-11)
+
+| Item | Status | Evidence |
+| :--- | :--- | :--- |
+| 1.1 Radar minimap & fog of war | ✅ Done | `js/minimap.js`, `js/fog.js`; tests §8–9, e2e minimap click |
+| 1.2 Save/load (3 slots, auto-save, export/import) | ✅ Done | `js/save_system.js`; tests §18, e2e save→reload→load |
+| 1.3 Nine-mission campaign | ✅ Done | `js/config.js`, `js/campaign.js`; tests §17 |
+| 1.4 Audio mixer, soundscapes, weather & combat FX | ✅ Done | `js/audio.js`, `js/fx.js`; tests §10–11 |
+| 1.5 Spatial hash, touch, accessibility, speeds, rebinding | ✅ Done | `js/spatial.js`, `js/touch.js`, `js/settings.js`; tests §7, §12–13, §19–20 |
+| 50+ automated tests | ✅ 340 unit + 32 e2e | `tests/test_runner.js`, `tests/e2e_smoke.js`, CI |
+| 2.1 Landing page | ✅ Done | `marketing/index.html` |
+| 2.2 Press kit | ✅ Done | `marketing/presskit.html`, `marketing/assets/` |
+| 2.3 PWA / portal bundles / desktop | ✅ Done (installers built per-OS by `release.yml`) | `manifest.json`, `sw.js`, `dist/`, `desktop/` |
+| 2.4 Monetization | ✅ Done (portal accounts pending) | `js/monetization.js` |
+| 2.5 Legal suite & consent banner | ✅ Drafted (counsel review pending) | `docs/PRIVACY.md`, `TERMS.md`, `EULA.md` |
+| 2.6 GTM playbook | ✅ Done | `docs/GTM_STRATEGY.md` |
+| Owner-only actions (accounts, legal entity, signing, licence choice) | ⏳ See checklist | `docs/LAUNCH_CHECKLIST.md` |
 
 ---
 

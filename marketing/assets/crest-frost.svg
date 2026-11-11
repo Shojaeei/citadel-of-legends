@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" role="img" aria-label="Frostbound Covenant crest">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e0f2fe"/><stop offset="1" stop-color="#0284c7"/></linearGradient></defs>
+  <path d="M100 8 L188 36 V120 C188 178 148 214 100 232 C52 214 12 178 12 120 V36 Z" fill="#0b132b" stroke="url(#g)" stroke-width="8"/>
+  <g stroke="url(#g)" stroke-width="7" stroke-linecap="round" fill="none">
+    <path d="M100 56 V168"/><path d="M52 84 L148 140"/><path d="M148 84 L52 140"/>
+    <path d="M86 64 L100 78 L114 64"/><path d="M86 160 L100 146 L114 160"/>
+    <path d="M56 100 L74 96 L66 80"/><path d="M144 124 L126 128 L134 144"/>
+    <path d="M144 100 L126 96 L134 80"/><path d="M56 124 L74 128 L66 144"/>
+  </g>
+</svg>

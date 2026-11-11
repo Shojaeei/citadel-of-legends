@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" role="img" aria-label="Solaris Order crest">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fde68a"/><stop offset="1" stop-color="#b45309"/></linearGradient></defs>
+  <path d="M100 8 L188 36 V120 C188 178 148 214 100 232 C52 214 12 178 12 120 V36 Z" fill="#1c1917" stroke="url(#g)" stroke-width="8"/>
+  <circle cx="100" cy="112" r="34" fill="url(#g)"/>
+  <g stroke="url(#g)" stroke-width="7" stroke-linecap="round">
+    <path d="M100 52 V66"/><path d="M100 158 V172"/><path d="M40 112 H54"/><path d="M146 112 H160"/>
+    <path d="M58 70 L68 80"/><path d="M142 70 L132 80"/><path d="M58 154 L68 144"/><path d="M142 154 L132 144"/>
+  </g>
+  <path d="M100 92 V134 M86 104 H114" stroke="#1c1917" stroke-width="6" stroke-linecap="round"/>
+</svg>

@@ -59,10 +59,16 @@ class IsometricRenderer {
         // 3. Render Depth-Sorted Entities (Buildings, Units, Projectiles)
         this.renderEntities();
 
-        // 4. Render Floating Particles & Damage Numbers
+        // 4. Combat FX (sparks, blood, rubble, flame patches)
+        if (this.game.fx) this.game.fx.renderWorld(ctx, (x, y) => this.worldToScreen(x, y));
+
+        // 5. Render Floating Particles & Damage Numbers
         this.renderParticles();
 
         ctx.restore();
+
+        // 6. Screen-space biome weather
+        if (this.game.fx) this.game.fx.renderWeather(ctx);
 
         // 5. Render Screen-Space Marquee Selection Box
         if (this.game.dragBox && this.game.dragBox.active) {
@@ -82,55 +88,155 @@ class IsometricRenderer {
         }
     }
 
-    renderTerrain() {
-        const ctx = this.ctx;
-        const gridSize = this.game.gridSize;
+    /** World-space pixel bounds of the whole map (for the offscreen layers). */
+    mapPixelBounds() {
+        const n = this.game.gridSize;
+        const halfW = this.tileW / 2;
+        return {
+            x: -(n * halfW) - 2,
+            y: -2,
+            w: n * this.tileW + 4,
+            h: n * this.tileH + 4
+        };
+    }
+
+    markTerrainDirty() {
+        this._terrainKey = null;
+    }
+
+    _makeLayer(w, h) {
+        if (typeof OffscreenCanvas !== 'undefined') return new OffscreenCanvas(w, h);
+        if (typeof document !== 'undefined' && document.createElement) {
+            const c = document.createElement('canvas');
+            c.width = w;
+            c.height = h;
+            return c.getContext ? c : null;
+        }
+        return null;
+    }
+
+    _diamond(ctx, sx, sy) {
         const halfW = this.tileW / 2;
         const halfH = this.tileH / 2;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + halfW, sy + halfH);
+        ctx.lineTo(sx, sy + this.tileH);
+        ctx.lineTo(sx - halfW, sy + halfH);
+        ctx.closePath();
+    }
 
-        // Viewport bounds calculation for accurate frustum culling
-        const viewMinX = -this.canvas.width / (2 * this.game.camera.zoom) - this.game.camera.x / this.game.camera.zoom - 100;
-        const viewMaxX = this.canvas.width / (2 * this.game.camera.zoom) - this.game.camera.x / this.game.camera.zoom + 100;
-        const viewMinY = -this.canvas.height / (2 * this.game.camera.zoom) - this.game.camera.y / this.game.camera.zoom - 100;
-        const viewMaxY = this.canvas.height / (2 * this.game.camera.zoom) - this.game.camera.y / this.game.camera.zoom + 100;
+    static tileColor(tile, x, y) {
+        if (tile.type === 'water') return '#1e40af';
+        if (tile.type === 'rock') return '#3f3f46';
+        if (tile.type === 'snow') return (x + y) % 2 === 0 ? '#e2e8f0' : '#cbd5e1';
+        if (tile.type === 'blight') return (x + y) % 2 === 0 ? '#3f1111' : '#2d0909';
+        return (x + y) % 2 === 0 ? '#15803d' : '#166534'; // verdant grass
+    }
 
-        for (let x = 0; x < gridSize; x++) {
-            for (let y = 0; y < gridSize; y++) {
-                const screen = this.worldToScreen(x, y);
+    /**
+     * Terrain is static between map changes, so it is baked once into an
+     * offscreen layer and blitted each frame (one drawImage instead of ~4,000
+     * path fills + strokes). The fog shroud is baked into a second layer at
+     * 10 Hz. Falls back to direct drawing where offscreen canvases are absent.
+     */
+    renderTerrain() {
+        const ctx = this.ctx;
+        const g = this.game;
+        const n = g.gridSize;
+        const bounds = this.mapPixelBounds();
+        const key = `${g.mapType}|${n}|${g.map.length}|${g.map[0] && g.map[0][0] ? g.map[0][0].type : ''}`;
 
-                // Frustum culling
-                if (screen.x < viewMinX - halfW || screen.x > viewMaxX + halfW ||
-                    screen.y < viewMinY - halfH || screen.y > viewMaxY + halfH) {
-                    continue;
+        if (this._terrainKey !== key || !this.terrainLayer) {
+            this.terrainLayer = this._makeLayer(bounds.w, bounds.h);
+            this.fogLayer = this._makeLayer(bounds.w, bounds.h);
+            this._fogStamp = -Infinity;
+            if (this.terrainLayer) {
+                const tctx = this.terrainLayer.getContext('2d');
+                tctx.translate(-bounds.x, -bounds.y);
+                tctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+                tctx.lineWidth = 1;
+                for (let x = 0; x < n; x++) {
+                    for (let y = 0; y < n; y++) {
+                        const sc = this.worldToScreen(x, y);
+                        this._diamond(tctx, sc.x, sc.y);
+                        tctx.fillStyle = IsometricRenderer.tileColor(g.map[x][y], x, y);
+                        tctx.fill();
+                        tctx.stroke();
+                    }
                 }
+            }
+            this._terrainKey = key;
+        }
 
-                const tile = this.game.map[x][y];
+        if (!this.terrainLayer) {
+            this.renderTerrainDirect();
+            return;
+        }
 
-                // Draw Isometric Diamond
-                ctx.beginPath();
-                ctx.moveTo(screen.x, screen.y);
-                ctx.lineTo(screen.x + halfW, screen.y + halfH);
-                ctx.lineTo(screen.x, screen.y + this.tileH);
-                ctx.lineTo(screen.x - halfW, screen.y + halfH);
-                ctx.closePath();
-
-                if (tile.type === 'water') {
-                    ctx.fillStyle = '#1e40af';
-                } else if (tile.type === 'rock') {
-                    ctx.fillStyle = '#3f3f46';
-                } else if (tile.type === 'snow') {
-                    ctx.fillStyle = (x + y) % 2 === 0 ? '#e2e8f0' : '#cbd5e1';
-                } else if (tile.type === 'blight') {
-                    ctx.fillStyle = (x + y) % 2 === 0 ? '#3f1111' : '#2d0909';
-                } else {
-                    // Verdant Grass
-                    ctx.fillStyle = (x + y) % 2 === 0 ? '#15803d' : '#166534';
+        // Ground layer = terrain + fog shroud, re-composited at 10 Hz so each
+        // frame costs exactly one (viewport-clipped) blit.
+        const fog = g.fog;
+        const fogOn = !!(fog && fog.enabled);
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        if (this.fogLayer && (now - this._fogStamp > 100 || this._fogWasOn !== fogOn)) {
+            this._fogStamp = now;
+            this._fogWasOn = fogOn;
+            const fctx = this.fogLayer.getContext('2d');
+            fctx.setTransform(1, 0, 0, 1, 0, 0);
+            fctx.globalCompositeOperation = 'copy';
+            fctx.drawImage(this.terrainLayer, 0, 0);
+            fctx.globalCompositeOperation = 'source-over';
+            if (fogOn) {
+                fctx.translate(-bounds.x, -bounds.y);
+                for (let x = 0; x < n; x++) {
+                    for (let y = 0; y < n; y++) {
+                        const shade = fog.shade[y * n + x];
+                        if (shade <= 0.02) continue;
+                        const sc = this.worldToScreen(x, y);
+                        this._diamond(fctx, sc.x, sc.y);
+                        fctx.fillStyle = `rgba(3, 3, 6, ${shade.toFixed(3)})`;
+                        fctx.fill();
+                    }
                 }
+            }
+        }
+        const layer = this.fogLayer || this.terrainLayer;
 
+        // Clip the blit to the visible world rectangle.
+        const cam = g.camera;
+        const vx0 = (-this.canvas.width / 2 - cam.x) / cam.zoom;
+        const vy0 = (-this.canvas.height / 2 - cam.y) / cam.zoom;
+        const vx1 = (this.canvas.width / 2 - cam.x) / cam.zoom;
+        const vy1 = (this.canvas.height / 2 - cam.y) / cam.zoom;
+        const sx = Math.max(0, Math.floor(vx0 - bounds.x));
+        const sy = Math.max(0, Math.floor(vy0 - bounds.y));
+        const ex = Math.min(bounds.w, Math.ceil(vx1 - bounds.x));
+        const ey = Math.min(bounds.h, Math.ceil(vy1 - bounds.y));
+        if (ex > sx && ey > sy) {
+            ctx.drawImage(layer, sx, sy, ex - sx, ey - sy, bounds.x + sx, bounds.y + sy, ex - sx, ey - sy);
+        }
+    }
+
+    /** Uncached path (very old browsers / tests without canvas support). */
+    renderTerrainDirect() {
+        const ctx = this.ctx;
+        const g = this.game;
+        const n = g.gridSize;
+        const fog = g.fog;
+        for (let x = 0; x < n; x++) {
+            for (let y = 0; y < n; y++) {
+                const sc = this.worldToScreen(x, y);
+                this._diamond(ctx, sc.x, sc.y);
+                ctx.fillStyle = IsometricRenderer.tileColor(g.map[x][y], x, y);
                 ctx.fill();
-                ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
-                ctx.lineWidth = 1;
-                ctx.stroke();
+                if (fog && fog.enabled) {
+                    const shade = fog.shade[y * n + x];
+                    if (shade > 0.02) {
+                        ctx.fillStyle = `rgba(3, 3, 6, ${shade.toFixed(3)})`;
+                        ctx.fill();
+                    }
+                }
             }
         }
     }
@@ -184,7 +290,10 @@ class IsometricRenderer {
         // Collect all renderables and sort by depth (isometric depth = gx + gy)
         const renderables = [];
 
+        const fog = this.game.fog;
+        const fogOn = fog && fog.enabled;
         this.game.buildings.forEach(b => {
+            if (fogOn && b.isEnemy && !fog.isExplored(b.gx + b.w / 2, b.gy + b.h / 2)) return;
             renderables.push({
                 type: 'building',
                 depth: b.gx + b.gy + (b.w + b.h) * 0.5,
@@ -193,6 +302,8 @@ class IsometricRenderer {
         });
 
         this.game.units.forEach(u => {
+            if (fogOn && u.isEnemy && !fog.isVisible(u.x, u.y)) return;
+            if (u.isEnemy && u.isConcealed && u.isConcealed()) return;
             renderables.push({
                 type: 'unit',
                 depth: u.x + u.y,
@@ -201,6 +312,7 @@ class IsometricRenderer {
         });
 
         this.game.projectiles.forEach(p => {
+            if (fogOn && !fog.isVisible(p.x, p.y)) return;
             renderables.push({
                 type: 'projectile',
                 depth: p.x + p.y,
@@ -243,9 +355,16 @@ class IsometricRenderer {
 
         // Draw 3D Isometric Architectural Block
         ctx.save();
+        const fog = this.game.fog;
+        if (b.isEnemy && fog && fog.enabled && !fog.isVisible(b.gx + b.w / 2, b.gy + b.h / 2)) {
+            ctx.globalAlpha = 0.55; // remembered, not currently observed
+        }
+        const highContrast = this.game.settings && this.game.settings.data.highContrast;
+        ctx.strokeStyle = highContrast ? (b.isEnemy ? '#ff3b3b' : '#ffffff') : 'rgba(0,0,0,0.55)';
+        ctx.lineWidth = highContrast ? 2.5 : 1;
         const baseW = b.w * 24;
         const baseH = b.h * 16;
-        const height = b.type === 'keep' ? 65 : b.type === 'tower' ? 55 : b.type.includes('wall') ? 22 : 36;
+        const height = b.type === 'keep' ? 65 : b.type === 'tower' ? 55 : b.type.includes('wall') ? 22 : b.type === 'cauldron' ? 18 : 36;
 
         const cx = screen.x;
         const cy = screen.y;
@@ -289,9 +408,14 @@ class IsometricRenderer {
         ctx.stroke();
 
         // Architectural Details
+        const supporter = !b.isEnemy && typeof Monetization !== 'undefined' && Monetization.supporter;
         if (b.type === 'keep') {
-            // Citadel Banner Pennant
-            ctx.fillStyle = b.isEnemy ? '#991b1b' : '#38bdf8';
+            // Citadel Banner Pennant (golden for Royal Supporters)
+            ctx.fillStyle = b.isEnemy ? '#991b1b' : supporter ? '#facc15' : '#38bdf8';
+            if (supporter) {
+                ctx.shadowColor = '#fde68a';
+                ctx.shadowBlur = 10;
+            }
             ctx.fillRect(cx - 3, cy - height - 16, 6, 16);
             ctx.beginPath();
             ctx.moveTo(cx + 3, cy - height - 16);
@@ -299,9 +423,25 @@ class IsometricRenderer {
             ctx.lineTo(cx + 3, cy - height - 4);
             ctx.closePath();
             ctx.fill();
+        } else if (b.type === 'cauldron') {
+            // Bubbling pitch cauldron
+            ctx.fillStyle = '#1c1917';
+            ctx.beginPath();
+            ctx.ellipse(cx, cy - height, baseW * 0.7, baseH * 0.6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ea580c';
+            ctx.shadowColor = '#f97316';
+            ctx.shadowBlur = 8;
+            const bubble = 2 + Math.sin(performance.now() / 180 + b.id) * 1.5;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy - height, baseW * 0.5, baseH * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(cx + 3, cy - height - 2, bubble, 0, Math.PI * 2);
+            ctx.fill();
         } else if (b.type === 'tower') {
             // Conical Turret Roof
-            ctx.fillStyle = b.isEnemy ? '#7f1d1d' : '#0284c7';
+            ctx.fillStyle = b.isEnemy ? '#7f1d1d' : supporter ? '#ca8a04' : '#0284c7';
             ctx.beginPath();
             ctx.moveTo(cx, cy - height - 20);
             ctx.lineTo(cx + baseW + 4, cy - height);
@@ -342,12 +482,20 @@ class IsometricRenderer {
             ctx.fill();
         }
 
-        // Building Label
-        ctx.shadowBlur = 0;
-        ctx.font = 'bold 11px Cinzel, serif';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = b.isEnemy ? '#f87171' : '#fef3c7';
-        ctx.fillText(b.name, cx, cy - height - 8);
+        // Building Label: keeps always; others when selected, hovered or zoomed in
+        // (permanent labels on every hovel made dense settlements unreadable).
+        const hover = this.hoverTile;
+        const hovered = hover && b.containsTile(hover.x, hover.y);
+        if (b.type === 'keep' || isSelected || hovered || this.game.camera.zoom >= 1.6) {
+            ctx.shadowBlur = 0;
+            ctx.font = 'bold 11px Cinzel, serif';
+            ctx.textAlign = 'center';
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+            ctx.strokeText(b.name, cx, cy - height - 8);
+            ctx.fillStyle = b.isEnemy ? '#f87171' : '#fef3c7';
+            ctx.fillText(b.name, cx, cy - height - 8);
+        }
 
         // Health Bar if Damaged
         if (b.hp < b.maxHp) {
@@ -389,6 +537,10 @@ class IsometricRenderer {
         // Unit Model Shape
         const altitude = u.isFlying ? -24 : 0;
         const unitY = screen.y + altitude;
+        const highContrast = this.game.settings && this.game.settings.data.highContrast;
+        ctx.strokeStyle = highContrast ? (u.isEnemy ? '#ff3b3b' : '#ffffff') : '#000';
+        ctx.lineWidth = highContrast ? 2.5 : 1;
+        if (u.isConcealed && u.isConcealed()) ctx.globalAlpha = 0.45;
 
         if (u.type === 'dragon') {
             // Faction Dragon
@@ -396,8 +548,7 @@ class IsometricRenderer {
             ctx.beginPath();
             ctx.arc(screen.x, unitY, 14, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = highContrast ? 2.5 : 2;
             ctx.stroke();
 
             // Wings
@@ -413,6 +564,24 @@ class IsometricRenderer {
             ctx.moveTo(screen.x + 14, unitY);
             ctx.lineTo(screen.x + 28, unitY - 14);
             ctx.lineTo(screen.x + 6, unitY - 4);
+            ctx.closePath();
+            ctx.fill();
+        } else if (u.type === 'warlord') {
+            // Enemy Warlord: large armored figure with a crown
+            ctx.fillStyle = '#7f1d1d';
+            ctx.beginPath();
+            ctx.arc(screen.x, unitY - 6, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#facc15';
+            ctx.beginPath();
+            ctx.moveTo(screen.x - 8, unitY - 16);
+            ctx.lineTo(screen.x - 5, unitY - 24);
+            ctx.lineTo(screen.x - 1, unitY - 18);
+            ctx.lineTo(screen.x + 2, unitY - 25);
+            ctx.lineTo(screen.x + 5, unitY - 18);
+            ctx.lineTo(screen.x + 8, unitY - 24);
+            ctx.lineTo(screen.x + 9, unitY - 16);
             ctx.closePath();
             ctx.fill();
         } else if (u.type === 'catapult') {
@@ -509,7 +678,7 @@ class IsometricRenderer {
 
         // Health Bar if Damaged or Selected
         if (isSelected || u.hp < u.maxHp) {
-            this.drawHealthBar(screen.x, unitY - 14, u.hp, u.maxHp, 22);
+            this.drawHealthBar(screen.x, unitY - (u.isGeneral ? 30 : 14), u.hp, u.maxHp, u.isGeneral ? 40 : 22);
         }
 
         ctx.restore();

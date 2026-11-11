@@ -130,3 +130,38 @@ A thorough code review identified the following critical vulnerabilities and des
    - Added automated headless browser verification testing DOM event clicks, modal transitions, and canvas lifecycle with visual screenshot proofs.
 
 
+
+---
+
+## 📅 Milestones 7–11: v1.0 Gold Master (Track 1) & Commercial Launch Infrastructure (Track 2)
+
+### Audit findings fixed before feature work
+- **Stacked game loops:** every `startCampaign`/`launchSkirmish` called `runGameLoop()`, so after "Next Mission" two or more rAF loops advanced the simulation (2x, 3x speed). Replaced with one app-lifetime loop.
+- **`setTimeout` wave spawns** ignored pause/speed and could not be saved mid-wave → simulation-time spawn queue.
+- **Zoom-unaware camera centering**; wheel zoom now anchors on the cursor.
+- **Population drift:** dead soldiers never freed housing.
+- **Declared-but-missing mechanics:** Obsidian speed bonus, Cathedral/Runestone/Crucible honor & pitch yields, Runestone "empower" aura.
+- **Offline blocker:** runtime Tailwind CDN + Google Fonts → precompiled CSS and self-hosted OFL fonts.
+
+### Track 1 delivered
+| Milestone | Deliverables |
+| :--- | :--- |
+| 6 – Tactical awareness | Radar minimap with frustum & drag navigation; fog of war (12/10/5-tile vision, blurred shroud) |
+| 7 – Persistence | 3 slots + auto-save (3 min & per wave), `.citadelsave` export/import, hardened validation |
+| 8 – Campaign | 9 missions per the PLANS table, briefings, objective tracker, bonus stars, unlocks; cauldrons, warlords, stealth |
+| 9 – AV polish | Mixer buses, faction soundscapes, weather (motes/snow/ash), sparks/blood/rubble/flame patches |
+| 10 – Hardening | Spatial hash, heap A*, cached ground layer, touch controls, accessibility settings, 0/1/2/5x speed, siege breach & retaliation AI |
+
+### Track 2 delivered
+Landing page, press kit, in-engine screenshots/GIF/OG card, logo & crests, PWA (manifest + SW), reproducible portal bundles, hardened Electron desktop shell (Linux AppImage built and launched headlessly in verification), monetization adapters, Royal Supporter Edition, legal suite + consent banner, GTM playbook with 10 templates, launch checklist, CI and release workflows.
+
+### Verification
+- `npm test`: **340 passed, 0 failed** (from 31).
+- `npm run test:e2e`: **32 passed, 0 failed** in real Chromium (incl. offline PWA reload and mobile touch).
+- Performance: 260 units simulate at ~0.2 ms/step; 1080p frame with 270 units renders in ~5–8 ms under software rasterization.
+- Packaged Electron app verified: serves `app://citadel/index.html`, no Node globals in page, CSP blocks remote fetch, localStorage works.
+
+### Dev chat
+> **[ENGINEER]:** The O3 gatehouses occasionally failed to spawn in the test run — random enemy defenders were standing on the footprint and the unit-occupancy check silently skipped placement. Mission-scripted structures now ignore unit occupancy; a regression test pins it.
+>
+> **[ENGINEER]:** Staged siege screenshots showed no fighting: the wall fully sealed the bridge, so A* (correctly) routed the wave 55 tiles around the river. That exposed the real bug — units whose route is sealed used to idle forever. They now breach the nearest blocking wall.

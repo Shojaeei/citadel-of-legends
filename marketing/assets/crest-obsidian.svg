@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" role="img" aria-label="Obsidian Scourge crest">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fca5a5"/><stop offset="1" stop-color="#7f1d1d"/></linearGradient></defs>
+  <path d="M100 8 L188 36 V120 C188 178 148 214 100 232 C52 214 12 178 12 120 V36 Z" fill="#180808" stroke="url(#g)" stroke-width="8"/>
+  <path d="M100 150 C92 136 78 128 62 132 C70 118 66 104 50 96 C70 94 84 102 90 116 C92 104 96 96 100 90 C104 96 108 104 110 116 C116 102 130 94 150 96 C134 104 130 118 138 132 C122 128 108 136 100 150 Z" fill="url(#g)"/>
+  <circle cx="94" cy="104" r="3" fill="#180808"/><circle cx="106" cy="104" r="3" fill="#180808"/>
+  <path d="M70 176 Q100 196 130 176" stroke="url(#g)" stroke-width="6" fill="none" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Press Kit — Citadel of Legends: Shattered Realms</title>
+    <meta name="description" content="Press kit for Citadel of Legends: Shattered Realms — factsheet, descriptions, features, screenshots, logos and contact.">
+    <meta name="theme-color" content="#0c0a09">
+    <link rel="icon" type="image/svg+xml" href="../icons/icon.svg">
+    <meta property="og:title" content="Citadel of Legends: Shattered Realms — Press Kit">
+    <meta property="og:image" content="assets/og-image.png">
+    <style>
+        @font-face { font-family: 'Cinzel'; font-weight: 400 900; font-display: swap; src: url('../assets/fonts/cinzel-latin-var.woff2') format('woff2'); }
+        @font-face { font-family: 'MedievalSharp'; font-display: swap; src: url('../assets/fonts/medievalsharp-latin.woff2') format('woff2'); }
+        :root { --bg: #0c0a09; --panel: #1c1917; --line: #44342a; --gold: #f59e0b; --gold-hi: #fde68a; --text: #f5f5f4; --muted: #b8aea6; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: Georgia, 'Times New Roman', serif; line-height: 1.65; }
+        a { color: var(--gold-hi); }
+        :focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 3px; }
+        .layout { display: grid; grid-template-columns: 300px 1fr; max-width: 1200px; margin: 0 auto; gap: 40px; padding: 32px 20px 80px; }
+        @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+        aside { position: sticky; top: 20px; align-self: start; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+        @media (max-width: 900px) { aside { position: static; } }
+        aside img { width: 100%; margin-bottom: 14px; }
+        aside h2 { font-family: 'Cinzel', serif; font-size: 13px; letter-spacing: .15em; text-transform: uppercase; color: var(--gold); margin: 18px 0 6px; }
+        aside dl { margin: 0; font-size: 14px; }
+        aside dt { color: var(--muted); font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; margin-top: 10px; }
+        aside dd { margin: 2px 0 0; }
+        aside nav a { display: block; color: var(--muted); text-decoration: none; padding: 3px 0; font-family: 'Cinzel', serif; font-size: 13px; }
+        aside nav a:hover { color: var(--gold-hi); }
+        main h1 { font-family: 'MedievalSharp', serif; font-weight: 400; color: var(--gold); font-size: clamp(36px, 6vw, 60px); margin: 0 0 4px; line-height: 1.05; }
+        main .tag { font-family: 'Cinzel', serif; letter-spacing: .25em; text-transform: uppercase; color: var(--gold-hi); font-size: 14px; margin-bottom: 26px; }
+        main section { border-top: 1px solid var(--line); padding: 26px 0; }
+        main h2 { font-family: 'Cinzel', serif; color: var(--gold-hi); font-size: 22px; margin: 0 0 12px; letter-spacing: .04em; }
+        main h3 { font-family: 'Cinzel', serif; font-size: 15px; color: var(--gold); margin: 18px 0 6px; letter-spacing: .06em; text-transform: uppercase; }
+        .pitch { background: var(--panel); border-left: 3px solid var(--gold); padding: 14px 18px; border-radius: 8px; margin: 0 0 12px; }
+        .copy-btn { font-family: 'Cinzel', serif; font-size: 12px; background: none; border: 1px solid var(--line); color: var(--gold-hi); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+        ul.features li { margin-bottom: 6px; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+        @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+        .grid figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+        .grid img { width: 100%; display: block; }
+        .grid figcaption { padding: 8px 12px; font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+        .logos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+        @media (max-width: 640px) { .logos { grid-template-columns: repeat(2, 1fr); } }
+        .logos a { display: block; background: #231d19; border: 1px solid var(--line); border-radius: 10px; padding: 12px; text-align: center; font-size: 12px; text-decoration: none; color: var(--muted); }
+        .logos img { height: 90px; margin: 0 auto 8px; object-fit: contain; }
+        table { border-collapse: collapse; width: 100%; font-size: 15px; }
+        th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 8px 6px; vertical-align: top; }
+        th { font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); width: 32%; }
+        .note { font-size: 13px; color: var(--muted); }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <aside aria-label="Factsheet">
+        <img src="assets/logo.svg" alt="Citadel of Legends: Shattered Realms logo" width="300" height="75">
+        <h2>Factsheet</h2>
+        <dl>
+            <dt>Developer</dt><dd>[STUDIO NAME]<br>Based in [CITY, COUNTRY]</dd>
+            <dt>Release date</dt><dd>v1.0 Gold Master — November 2026</dd>
+            <dt>Platforms</dt><dd>Web browser (desktop &amp; mobile), installable PWA, Windows, macOS, Linux</dd>
+            <dt>Website</dt><dd><a href="index.html">citadel-of-legends (official site)</a></dd>
+            <dt>Price</dt><dd>Free to play<br>Royal Supporter Edition: optional tip (suggested USD 4.99)</dd>
+            <dt>Genre</dt><dd>Castle-builder / real-time strategy</dd>
+            <dt>Languages</dt><dd>English</dd>
+            <dt>Press contact</dt><dd>[PRESS EMAIL]</dd>
+            <dt>Social</dt><dd><a href="https://discord.gg/REPLACE_ME" rel="noopener">Discord</a> &bull; <a href="https://github.com/Shojaeei/citadel-of-legends" rel="noopener">GitHub</a></dd>
+        </dl>
+        <h2>Contents</h2>
+        <nav aria-label="Press kit sections">
+            <a href="#description">Description</a>
+            <a href="#history">History</a>
+            <a href="#features">Features</a>
+            <a href="#videos">Videos &amp; GIFs</a>
+            <a href="#images">Images</a>
+            <a href="#logo">Logo &amp; Icon</a>
+            <a href="#tech">Technical Details</a>
+            <a href="#awards">Awards &amp; Recognition</a>
+            <a href="#links">Additional Links</a>
+            <a href="#about">About the Studio</a>
+            <a href="#credits">Credits</a>
+            <a href="#contact">Contact</a>
+        </nav>
+        <p style="margin-top:18px"><a href="../index.html" style="font-family:'Cinzel',serif">&#9876; Play the game</a></p>
+    </aside>
+
+    <main>
+        <h1>Citadel of Legends</h1>
+        <div class="tag">Shattered Realms &bull; Press Kit</div>
+
+        <section id="description" aria-labelledby="h-desc">
+            <h2 id="h-desc">Description</h2>
+            <h3>40 words</h3>
+            <p class="pitch" id="pitch-40">Citadel of Legends is a free browser castle-builder RTS. Grow a medieval citadel, balance food, taxes and popularity, then defend your walls with archers, boiling pitch and dragons across a nine-mission campaign for three asymmetric kingdoms. No install required.</p>
+            <button class="copy-btn" data-copy="pitch-40" type="button">Copy</button>
+            <h3>100 words</h3>
+            <p class="pitch" id="pitch-100">Citadel of Legends: Shattered Realms is a tactical castle-builder and real-time strategy game that runs in the browser. Players raise a living medieval citadel where every peasant is a worker, a taxpayer and a mouth to feed. Rations, taxes and popularity drive immigration, while sawmills, quarries, mythril mines and brimstone rigs fuel the war machine. When enemy waves cross the river, players man watchtowers, pour boiling pitch and unleash faction dragons. Three asymmetric kingdoms — Solaris Order, Frostbound Covenant and Obsidian Scourge — each have unique champions, monuments and economies across a nine-mission campaign. Free, offline-capable, zero dependencies.</p>
+            <button class="copy-btn" data-copy="pitch-100" type="button">Copy</button>
+            <h3>Full description</h3>
+            <p>In the Shattered Realms, three powers vie for the crossings of a great river. King Arthur's <strong>Solaris Order</strong> holds the green Valley of Avalon with Sun-Blade Knights and the healing light of the Cathedral. Siegfried's <strong>Frostbound Covenant</strong> quarries basalt from the glacier and calls Valkyries from the storm. Count Vlad's <strong>Obsidian Scourge</strong> rules the blighted wastes with Bloodknights who walk unseen and cauldrons of boiling pitch.</p>
+            <p>Citadel of Legends combines a deep castle economy with real-time siege defense. Seven resources, a fragile popularity rating and an immigration system reward wise rule. Enemy armies use A* pathfinding to find the weak point in your walls — and batter it down if there is none. Fog of war, a radar minimap, box selection and four game speeds give players full tactical command, on desktop or touch devices.</p>
+            <p>Every visual is drawn live on HTML5 Canvas and every sound — from sword clashes to wolf howls on the wind — is synthesized in real time with the Web Audio API. There are no image sprites, audio files, engines or frameworks: the game loads in a heartbeat, installs as an offline app and respects player privacy with no tracking.</p>
+        </section>
+
+        <section id="history" aria-labelledby="h-history">
+            <h2 id="h-history">History</h2>
+            <p>The project began as a single 1,100-line HTML prototype exploring whether a classic-style castle simulation could run with zero dependencies in a browser tab. Over five engineering milestones it grew into a modular engine: an isometric 2.5D renderer, A* pathfinding, a siege AI, faction asymmetry and ballistics, then the v1.0 work — fog of war, radar minimap, save/load with export, the nine-mission campaign, procedural soundscapes, weather, mobile touch controls and a spatial-hash simulation that keeps 250+ units at 60 FPS. The full development log is public in the project repository.</p>
+        </section>
+
+        <section id="features" aria-labelledby="h-features">
+            <h2 id="h-features">Features</h2>
+            <ul class="features">
+                <li><strong>Three asymmetric factions</strong> — unique economies, monuments, champions (Avalon Paladin, Frost Valkyrie, Vampire Bloodknight) and dragons.</li>
+                <li><strong>Nine-mission narrative campaign</strong> — briefings, multi-objective missions and bonus challenges (e.g. "slay the enemy general with your dragon", "complete in under 12 minutes").</li>
+                <li><strong>Deep castle economy</strong> — rations, taxes, famine, popularity-driven immigration and seven resources.</li>
+                <li><strong>Real-time siege warfare</strong> — watchtowers, boiling-pitch cauldrons, parabolic catapult fire with splash damage, wall breaching and retaliation AI.</li>
+                <li><strong>Fog of war &amp; radar minimap</strong> — explore the realm; click or drag the minimap to command the camera.</li>
+                <li><strong>Save anywhere</strong> — three slots, rolling auto-save and exportable <code>.citadelsave</code> files.</li>
+                <li><strong>Procedural audio</strong> — faction soundscapes (birdsong and abbey chimes, arctic wind and campfire crackle, subterranean hum and wolf howls) with a full volume mixer.</li>
+                <li><strong>Accessible &amp; mobile-ready</strong> — high-contrast outlines, rebindable keys, reduced motion, pinch-zoom, long-press commands and a virtual joystick.</li>
+                <li><strong>Zero dependencies, works offline</strong> — no engine, framework or tracking; installable as a PWA or desktop app.</li>
+            </ul>
+        </section>
+
+        <section id="videos" aria-labelledby="h-videos">
+            <h2 id="h-videos">Videos &amp; GIFs</h2>
+            <div class="grid">
+                <figure style="grid-column:1/-1"><img src="assets/gameplay.gif" alt="Animated gameplay of a siege at the river bridge" width="720" height="405" loading="lazy"><figcaption><span>Siege at the bridge (GIF, 720p)</span><a href="assets/gameplay.gif" download>Download</a></figcaption></figure>
+            </div>
+            <p class="note">A full trailer is planned for launch week. Creators may capture and publish their own footage — see the Content Creator Permission in the <a href="../docs/EULA.md">EULA</a>.</p>
+        </section>
+
+        <section id="images" aria-labelledby="h-images">
+            <h2 id="h-images">Images</h2>
+            <p class="note">All screenshots are 1920&times;1080, captured directly from the game engine.</p>
+            <div class="grid">
+                <figure><img src="assets/screenshots/02_solaris_siege.png" alt="Solaris citadel defending the river crossing" loading="lazy" width="1920" height="1080"><figcaption><span>Solaris Order siege</span><a href="assets/screenshots/02_solaris_siege.png" download>PNG</a></figcaption></figure>
+                <figure><img src="assets/screenshots/03_frost_bridge_battle.png" alt="Frostbound fortress in the snow" loading="lazy" width="1920" height="1080"><figcaption><span>Frostbound bridge battle</span><a href="assets/screenshots/03_frost_bridge_battle.png" download>PNG</a></figcaption></figure>
+                <figure><img src="assets/screenshots/04_obsidian_dragonfire.png" alt="Obsidian stronghold in the ash-filled wastes" loading="lazy" width="1920" height="1080"><figcaption><span>Obsidian dragonfire</span><a href="assets/screenshots/04_obsidian_dragonfire.png" download>PNG</a></figcaption></figure>
+                <figure><img src="assets/screenshots/05_mission_briefing.png" alt="Mission briefing screen" loading="lazy" width="1920" height="1080"><figcaption><span>Mission briefing</span><a href="assets/screenshots/05_mission_briefing.png" download>PNG</a></figcaption></figure>
+                <figure><img src="assets/screenshots/01_main_menu.png" alt="Main menu" loading="lazy" width="1920" height="1080"><figcaption><span>Main menu</span><a href="assets/screenshots/01_main_menu.png" download>PNG</a></figcaption></figure>
+                <figure><img src="assets/og-image.png" alt="Key art social card" loading="lazy" width="1200" height="630"><figcaption><span>Key art / social card</span><a href="assets/og-image.png" download>PNG</a></figcaption></figure>
+            </div>
+        </section>
+
+        <section id="logo" aria-labelledby="h-logo">
+            <h2 id="h-logo">Logo &amp; Icon</h2>
+            <div class="logos">
+                <a href="assets/logo.svg" download><img src="assets/logo.svg" alt="Logo (SVG)">Logo — SVG</a>
+                <a href="assets/logo.png" download><img src="assets/logo.png" alt="Logo (PNG, transparent)">Logo — PNG transparent</a>
+                <a href="assets/logo-dark-bg.png" download><img src="assets/logo-dark-bg.png" alt="Logo on dark background">Logo — PNG dark</a>
+                <a href="../icons/icon-512.png" download><img src="../icons/icon-512.png" alt="App icon">App icon 512&times;512</a>
+                <a href="assets/crest-solaris.png" download><img src="assets/crest-solaris.svg" alt="Solaris crest">Solaris crest</a>
+                <a href="assets/crest-frost.png" download><img src="assets/crest-frost.svg" alt="Frostbound crest">Frostbound crest</a>
+                <a href="assets/crest-obsidian.png" download><img src="assets/crest-obsidian.svg" alt="Obsidian crest">Obsidian crest</a>
+                <a href="../icons/icon.svg" download><img src="../icons/icon.svg" alt="App icon SVG">App icon — SVG</a>
+            </div>
+        </section>
+
+        <section id="tech" aria-labelledby="h-tech">
+            <h2 id="h-tech">Technical Details</h2>
+            <table>
+                <tr><th scope="row">Engine</th><td>Custom HTML5 Canvas 2D isometric renderer (no third-party engine)</td></tr>
+                <tr><th scope="row">Audio</th><td>100% procedural Web Audio synthesis — no audio files</td></tr>
+                <tr><th scope="row">Download size</th><td>Under 1 MB for the web build (fonts included)</td></tr>
+                <tr><th scope="row">Performance</th><td>Spatial-hash simulation sustains 250+ units; adaptive particle quality on low-end devices</td></tr>
+                <tr><th scope="row">Input</th><td>Mouse &amp; keyboard (rebindable), touch (pinch, long-press, virtual joystick)</td></tr>
+                <tr><th scope="row">Persistence</th><td>3 save slots + auto-save; export/import <code>.citadelsave</code> files</td></tr>
+                <tr><th scope="row">Privacy</th><td>No accounts, analytics or tracking; saves stay on device</td></tr>
+            </table>
+        </section>
+
+        <section id="awards" aria-labelledby="h-awards">
+            <h2 id="h-awards">Awards &amp; Recognition</h2>
+            <p class="note">None yet — the game launches in November 2026.</p>
+        </section>
+
+        <section id="links" aria-labelledby="h-links">
+            <h2 id="h-links">Additional Links</h2>
+            <ul>
+                <li><a href="index.html">Official website</a></li>
+                <li><a href="../index.html">Play in your browser</a></li>
+                <li><a href="https://github.com/Shojaeei/citadel-of-legends" rel="noopener">Source repository &amp; development log</a></li>
+            </ul>
+        </section>
+
+        <section id="about" aria-labelledby="h-about">
+            <h2 id="h-about">About [STUDIO NAME]</h2>
+            <p>[STUDIO NAME] is an independent game studio making strategy games that load instantly, run anywhere and respect players' time and privacy. [ADD 1–2 SENTENCES ABOUT THE TEAM.]</p>
+        </section>
+
+        <section id="credits" aria-labelledby="h-credits">
+            <h2 id="h-credits">Credits</h2>
+            <table>
+                <tr><th scope="row">[NAME]</th><td>Game design, engineering &amp; procedural audio</td></tr>
+                <tr><th scope="row">Cinzel typeface</th><td>The Cinzel Project Authors (SIL OFL 1.1)</td></tr>
+                <tr><th scope="row">MedievalSharp typeface</th><td>wmk69 (SIL OFL 1.1)</td></tr>
+            </table>
+        </section>
+
+        <section id="contact" aria-labelledby="h-contact">
+            <h2 id="h-contact">Contact</h2>
+            <p>Press &amp; business: <strong>[PRESS EMAIL]</strong><br>Creators requesting supporter keys: <strong>[PRESS EMAIL]</strong> with your channel link.</p>
+        </section>
+    </main>
+</div>
+<script>
+    document.querySelectorAll('.copy-btn').forEach(function (b) {
+        b.addEventListener('click', function () {
+            var text = document.getElementById(b.dataset.copy).textContent;
+            if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1500); });
+        });
+    });
+</script>
+</body>
+</html>

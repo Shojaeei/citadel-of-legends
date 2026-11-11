@@ -2,7 +2,24 @@
    Citadel of Legends: Shattered Realms - Main Stylesheet
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=MedievalSharp&display=swap');
+/* Self-hosted fonts (SIL Open Font License 1.1 - see assets/fonts/OFL-*.txt).
+   Bundled locally so the game works fully offline and on portals that block
+   third-party font CDNs. */
+@font-face {
+    font-family: 'Cinzel';
+    font-style: normal;
+    font-weight: 400 900;
+    font-display: swap;
+    src: url('../assets/fonts/cinzel-latin-var.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'MedievalSharp';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../assets/fonts/medievalsharp-latin.woff2') format('woff2');
+}
 
 :root {
     --parchment-bg: #1c1917;
@@ -118,4 +135,37 @@ body {
 
 .pulse-gold {
     animation: pulseGlow 2.5s infinite;
+}
+
+/* Keyboard focus visibility (WCAG 2.4.7 / 2.4.11) */
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+a:focus-visible,
+label:focus-within {
+    outline: 2px solid #fbbf24;
+    outline-offset: 2px;
+}
+
+/* Minimum touch target size on coarse pointers (WCAG 2.5.8) */
+@media (pointer: coarse) {
+    .parchment-button {
+        min-height: 36px;
+        min-width: 36px;
+    }
+    #game-canvas {
+        touch-action: none;
+    }
+}
+
+#game-canvas,
+#minimap-canvas {
+    touch-action: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
 }

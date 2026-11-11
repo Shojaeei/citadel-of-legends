@@ -1,0 +1,25 @@
+{
+  "name": "citadel-of-legends",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Citadel of Legends: Shattered Realms - a zero-dependency HTML5 Canvas tactical castle-builder RTS.",
+  "homepage": "https://github.com/Shojaeei/citadel-of-legends",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Shojaeei/citadel-of-legends.git"
+  },
+  "license": "SEE LICENSE IN docs/EULA.md",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node tests/test_runner.js",
+    "test:e2e": "node tests/e2e_smoke.js",
+    "build:css": "npx -y tailwindcss@3.4.17 -i css/tailwind.src.css -o css/tailwind.css --minify",
+    "build:icons": "node scripts/generate_icons.js",
+    "build:media": "node scripts/capture_media.js",
+    "build:web": "node scripts/build_web_release.js",
+    "build": "npm run build:css && npm run build:web",
+    "serve": "python3 -m http.server 8080"
+  }
+}

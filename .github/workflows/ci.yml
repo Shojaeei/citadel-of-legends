@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Unit, integration & distribution tests
+        run: node tests/test_runner.js
+      - name: Build web release bundles
+        run: node scripts/build_web_release.js --out dist-ci
+      - name: Install Playwright (dev-only, not shipped)
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Browser end-to-end smoke test
+        run: node tests/e2e_smoke.js
+      - name: Upload release bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-release
+          path: dist-ci/
+          retention-days: 14
+
+  desktop-package:
+    # Verifies the Electron edition packages on every OS (unsigned, unpacked;
+    # signed installers are produced by release.yml on version tags).
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install desktop toolchain
+        working-directory: desktop
+        run: npm ci --no-audit --no-fund
+      - name: Package (unpacked, unsigned)
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run stage && npx electron-builder --dir --publish never
+      - name: Verify packaged app contains the game
+        working-directory: desktop
+        shell: bash
+        run: |
+          ls release
+          found=$(find release -name 'app.asar' | head -1)
+          test -n "$found" || { echo "app.asar missing"; exit 1; }
+          echo "Packaged: $found"

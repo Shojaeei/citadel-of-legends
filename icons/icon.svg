@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Citadel of Legends crest">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="70%">
+      <stop offset="0" stop-color="#3b1d08"/>
+      <stop offset="1" stop-color="#0c0a09"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="0.5" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#b45309"/>
+    </linearGradient>
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e7e5e4"/>
+      <stop offset="1" stop-color="#78716c"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <!-- Shield -->
+  <path d="M256 52 L420 104 V250 C420 352 346 420 256 462 C166 420 92 352 92 250 V104 Z" fill="#1c1917" stroke="url(#gold)" stroke-width="16"/>
+  <!-- Citadel -->
+  <g fill="url(#stone)" stroke="#292524" stroke-width="5" stroke-linejoin="round">
+    <path d="M150 360 V250 h22 v-22 h20 v22 h20 v-22 h20 v22 h12 V360 Z"/>
+    <path d="M318 360 V250 h12 v-22 h20 v22 h20 v-22 h20 v22 h22 V360 Z"/>
+    <path d="M206 360 V196 h18 v-24 h22 v24 h20 v-24 h22 v24 h18 V360 Z"/>
+  </g>
+  <!-- Gate -->
+  <path d="M234 360 V312 a22 22 0 0 1 44 0 V360 Z" fill="#0c0a09"/>
+  <!-- Banner -->
+  <path d="M256 172 V112" stroke="#fde68a" stroke-width="6"/>
+  <path d="M259 112 L304 126 L259 140 Z" fill="url(#gold)"/>
+  <!-- Ground -->
+  <path d="M132 362 H380" stroke="url(#gold)" stroke-width="10" stroke-linecap="round"/>
+</svg>

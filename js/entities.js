@@ -4,6 +4,22 @@
 
 let _nextEntityId = 1;
 
+/** Save/load support: ensure freshly spawned ids never collide with loaded ones. */
+function getNextEntityId() {
+    return _nextEntityId;
+}
+function setNextEntityId(n) {
+    if (Number.isInteger(n) && n > _nextEntityId) _nextEntityId = n;
+}
+function resetEntityIds() {
+    _nextEntityId = 1;
+}
+
+function entityCenter(e) {
+    if (e.x !== undefined) return { x: e.x, y: e.y };
+    return { x: e.gx + (e.w || 1) * 0.5, y: e.gy + (e.h || 1) * 0.5 };
+}
+
 class Building {
     constructor(type, gx, gy, isEnemy = false, faction = 'solaris') {
         this.id = _nextEntityId++;
@@ -12,6 +28,7 @@ class Building {
         this.gy = gy;
         this.isEnemy = isEnemy;
         this.faction = faction;
+        this.tag = null;
 
         const def = BUILDINGS_DEF[type] || {};
         this.name = def.name || type;
@@ -21,25 +38,27 @@ class Building {
         this.hp = this.maxHp;
         this.color = def.color || '#78350f';
 
-        // Defensive Tower combat stats
         this.isTower = def.isTower || false;
         this.isWall = def.isWall || false;
         this.isGate = def.isGate || false;
         this.isCathedral = def.isCathedral || false;
         this.isRunestone = def.isRunestone || false;
         this.isCrucible = def.isCrucible || false;
-        this.attackRange = this.isTower ? 7.5 : 0;
-        this.attackDamage = this.isTower ? 22 : 0;
+        this.isCauldron = def.isCauldron || false;
+        this.attackRange = this.isTower ? 7.5 : this.isCauldron ? 2.5 : 0;
+        this.attackDamage = this.isTower ? 22 : this.isCauldron ? 40 : 0;
         this.attackCooldown = 0;
-        this.attackRate = 1.1; // seconds between tower volleys
+        this.attackRate = this.isCauldron ? 2.0 : 1.1; // seconds between volleys / pours
         this.healCooldown = 2.5;
+        this.lastAttackerType = null;
     }
 
     containsTile(x, y) {
         return x >= this.gx && x < this.gx + this.w && y >= this.gy && y < this.gy + this.h;
     }
 
-    takeDamage(amt) {
+    takeDamage(amt, attacker = null) {
+        if (attacker && attacker.type) this.lastAttackerType = attacker.type;
         this.hp = Math.max(0, this.hp - amt);
         return this.hp <= 0;
     }
@@ -49,49 +68,67 @@ class Building {
     }
 
     update(dt, game) {
+        if (this.hp <= 0) return;
+        const cx = this.gx + this.w * 0.5;
+        const cy = this.gy + this.h * 0.5;
+
         // Cathedral Healing Sanctuary Aura
-        if (this.isCathedral && !this.isEnemy && this.hp > 0) {
+        if (this.isCathedral && !this.isEnemy) {
             this.healCooldown -= dt;
             if (this.healCooldown <= 0) {
                 this.healCooldown = 2.5;
                 let healed = false;
-                const cx = this.gx + this.w * 0.5;
-                const cy = this.gy + this.h * 0.5;
-                game.units.forEach(u => {
-                    if (!u.isEnemy && u.hp < u.maxHp && Math.hypot(u.x - cx, u.y - cy) <= 5.5) {
-                        u.hp = Math.min(u.maxHp, u.hp + 18);
-                        game.spawnFloatingText('+18 HP', u.x, u.y, '#22c55e');
-                        healed = true;
-                    }
+                queryUnitsNear(game, cx, cy, 5.5, u => !u.isEnemy && u.hp > 0 && u.hp < u.maxHp).forEach(u => {
+                    u.hp = Math.min(u.maxHp, u.hp + 18);
+                    game.spawnFloatingText('+18 HP', u.x, u.y, '#22c55e');
+                    healed = true;
                 });
                 if (healed) Sound.playHeal();
             }
         }
 
-        // Defensive Watchtower Automated Defense
-        if (this.isTower && this.hp > 0) {
+        // Runestone: empowers nearby allies (+25% attack while in the aura)
+        if (this.isRunestone && !this.isEnemy) {
+            this.healCooldown -= dt;
+            if (this.healCooldown <= 0) {
+                this.healCooldown = 1.0;
+                queryUnitsNear(game, cx, cy, 6.0, u => !u.isEnemy && u.hp > 0 && !u.isWorker).forEach(u => {
+                    u.empoweredTimer = 1.5;
+                });
+            }
+        }
+
+        // Boiling Pitch Cauldron: automated area denial, consumes pitch
+        if (this.isCauldron && !this.isEnemy) {
             if (this.attackCooldown > 0) {
                 this.attackCooldown -= dt;
             } else {
-                // Find nearest hostile unit within range
-                const centerX = this.gx + this.w * 0.5;
-                const centerY = this.gy + this.h * 0.5;
-                let nearestEnemy = null;
-                let nearestDist = this.attackRange;
-
-                for (const u of game.units) {
-                    if (u.isEnemy !== this.isEnemy && u.hp > 0) {
-                        const dist = Math.hypot(u.x - centerX, u.y - centerY);
-                        if (dist <= nearestDist) {
-                            nearestDist = dist;
-                            nearestEnemy = u;
-                        }
-                    }
+                const foes = queryUnitsNear(game, cx, cy, this.attackRange, u => u.isEnemy && u.hp > 0 && !u.isFlying);
+                const econ = game.economy;
+                if (foes.length > 0 && econ && econ.res.pitch >= 1) {
+                    econ.res.pitch -= 1;
+                    foes.forEach(u => {
+                        u.takeDamage(this.attackDamage, this, game);
+                        game.spawnFloatingText(`-${this.attackDamage} Pitch`, u.x, u.y, '#f97316');
+                        if (game.fx) game.fx.emitSparks(u.x, u.y, 4);
+                    });
+                    Sound.playShatter();
+                    this.attackCooldown = this.attackRate;
                 }
+            }
+        }
+
+        // Defensive Watchtower Automated Defense
+        if (this.isTower) {
+            if (this.attackCooldown > 0) {
+                this.attackCooldown -= dt;
+            } else {
+                const nearestEnemy = findNearestUnit(game, cx, cy, this.attackRange, u =>
+                    u.isEnemy !== this.isEnemy && u.hp > 0 && !(u.isConcealed && u.isConcealed() && Math.hypot(u.x - cx, u.y - cy) > 1.5));
 
                 if (nearestEnemy) {
                     Sound.playBowTwang();
-                    game.spawnProjectile('arrow', centerX, centerY, nearestEnemy, this.attackDamage);
+                    game.spawnProjectile('arrow', cx, cy, nearestEnemy, this.attackDamage, this);
                     this.attackCooldown = this.attackRate;
                 }
             }
@@ -115,11 +152,16 @@ class Unit {
         this.atk = def.atk || 15;
         this.range = def.range || 1.2;
         this.speed = def.speed || 1.0;
+        if (!isEnemy && FACTIONS_DEF[faction] && FACTIONS_DEF[faction].bonuses.unitSpeedMultiplier) {
+            this.speed *= FACTIONS_DEF[faction].bonuses.unitSpeedMultiplier;
+        }
         this.isFlying = def.isFlying || false;
         this.isSiege = def.isSiege || false;
         this.isWorker = def.isWorker || false;
         this.isHealer = def.isHealer || false;
         this.isLifesteal = def.isLifesteal || false;
+        this.isStealthy = def.isStealthy || false;
+        this.isGeneral = def.isGeneral || false;
         this.color = def.color || '#38bdf8';
 
         this.state = 'idle'; // 'idle', 'moving', 'attacking'
@@ -129,10 +171,19 @@ class Unit {
         this.attackCooldown = 0;
         this.attackRate = type === 'dragon' ? 1.8 : type === 'catapult' ? 2.5 : 1.1;
         this.healCooldown = 2.0;
+        this.revealedTimer = 0;
+        this.empoweredTimer = 0;
+        this.lastAttackerType = null;
+        this.waveId = 0;
 
         // Auto Aggro radius for soldiers
         this.aggroRadius = this.isWorker ? 0 : this.isEnemy ? 10.0 : 6.0;
         this.scanCooldown = 0;
+    }
+
+    /** Stealthy units are hidden from enemy targeting until they strike. */
+    isConcealed() {
+        return this.isStealthy && this.revealedTimer <= 0;
     }
 
     moveTo(tx, ty, game = null) {
@@ -154,17 +205,16 @@ class Unit {
         this.state = 'attacking';
 
         if (game && game.pathfinding && entity) {
-            const targetX = entity.x !== undefined ? entity.x : entity.gx + (entity.w || 1) * 0.5;
-            const targetY = entity.y !== undefined ? entity.y : entity.gy + (entity.h || 1) * 0.5;
-            this.path = game.pathfinding.findPath(this.x, this.y, targetX, targetY, this.isFlying, this.isEnemy);
+            const c = entityCenter(entity);
+            this.path = game.pathfinding.findPath(this.x, this.y, c.x, c.y, this.isFlying, this.isEnemy);
             this.waypointIndex = 0;
         }
     }
 
     update(dt, game) {
-        if (this.attackCooldown > 0) {
-            this.attackCooldown -= dt;
-        }
+        if (this.attackCooldown > 0) this.attackCooldown -= dt;
+        if (this.revealedTimer > 0) this.revealedTimer -= dt;
+        if (this.empoweredTimer > 0) this.empoweredTimer -= dt;
 
         // Paladin Healing Aura
         if (this.isHealer && !this.isEnemy) {
@@ -172,12 +222,10 @@ class Unit {
             if (this.healCooldown <= 0) {
                 this.healCooldown = 2.0;
                 let healed = false;
-                game.units.forEach(u => {
-                    if (!u.isEnemy && u !== this && u.hp < u.maxHp && Math.hypot(u.x - this.x, u.y - this.y) <= 3.5) {
-                        u.hp = Math.min(u.maxHp, u.hp + 14);
-                        game.spawnFloatingText('+14 HP', u.x, u.y, '#22c55e');
-                        healed = true;
-                    }
+                queryUnitsNear(game, this.x, this.y, 3.5, u => !u.isEnemy && u !== this && u.hp > 0 && u.hp < u.maxHp).forEach(u => {
+                    u.hp = Math.min(u.maxHp, u.hp + 14);
+                    game.spawnFloatingText('+14 HP', u.x, u.y, '#22c55e');
+                    healed = true;
                 });
                 if (healed) Sound.playHeal();
             }
@@ -191,27 +239,47 @@ class Unit {
                 return;
             }
 
-            const targetX = this.targetEntity.x !== undefined ? this.targetEntity.x : this.targetEntity.gx + (this.targetEntity.w || 1) * 0.5;
-            const targetY = this.targetEntity.y !== undefined ? this.targetEntity.y : this.targetEntity.gy + (this.targetEntity.h || 1) * 0.5;
+            // Retaliation: units sieging a structure turn on nearby defenders.
+            if (this.targetEntity instanceof Building && !this.isWorker) {
+                this.retaliateTimer = (this.retaliateTimer || 0) + dt;
+                if (this.retaliateTimer >= 1.0) {
+                    this.retaliateTimer = 0;
+                    const threat = findNearestUnit(game, this.x, this.y, 3.5, u =>
+                        u.isEnemy !== this.isEnemy && u.hp > 0 && !(u.isConcealed && u.isConcealed()));
+                    if (threat) {
+                        this.attackTarget(threat, game);
+                        return;
+                    }
+                }
+            }
 
-            const dx = targetX - this.x;
-            const dy = targetY - this.y;
-            const dist = Math.hypot(dx, dy);
+            const c = entityCenter(this.targetEntity);
+            const dist = Math.hypot(c.x - this.x, c.y - this.y);
+            const reach = this.range + (this.targetEntity instanceof Building ? 0.5 + Math.max(this.targetEntity.w, this.targetEntity.h) * 0.5 : 0);
 
-            // Check if inside weapon attack range
-            if (dist <= this.range + (this.targetEntity instanceof Building ? 0.8 : 0)) {
+            if (dist <= reach) {
                 if (this.attackCooldown <= 0) {
                     this.performAttack(this.targetEntity, game);
                     this.attackCooldown = this.attackRate;
                 }
             } else {
-                this.followWaypoints(dt, game);
+                this.followWaypoints(dt, game, true);
+
+                // Path exhausted but target still out of reach => the route is walled
+                // off. Breach the nearest hostile structure blocking the way.
+                if (!this.isFlying && (!this.path || this.waypointIndex >= this.path.length)) {
+                    const blocker = this.findBlockingStructure(game);
+                    if (blocker && blocker !== this.targetEntity) {
+                        this.attackTarget(blocker, game);
+                        return;
+                    }
+                }
 
                 this.scanCooldown += dt;
                 if (this.scanCooldown > 1.2) {
                     this.scanCooldown = 0;
-                    if (this.targetEntity instanceof Unit) {
-                        this.path = game.pathfinding.findPath(this.x, this.y, targetX, targetY, this.isFlying, this.isEnemy);
+                    if (this.targetEntity instanceof Unit && game.pathfinding) {
+                        this.path = game.pathfinding.findPath(this.x, this.y, c.x, c.y, this.isFlying, this.isEnemy);
                         this.waypointIndex = 0;
                     }
                 }
@@ -221,7 +289,7 @@ class Unit {
 
         // 2. Waypoint Movement
         if (this.state === 'moving') {
-            this.followWaypoints(dt, game);
+            this.followWaypoints(dt, game, false);
             return;
         }
 
@@ -235,9 +303,9 @@ class Unit {
         }
     }
 
-    followWaypoints(dt, game) {
+    followWaypoints(dt, game, keepAttacking = false) {
         if (!this.path || this.waypointIndex >= this.path.length) {
-            this.state = 'idle';
+            if (!keepAttacking) this.state = 'idle';
             return;
         }
 
@@ -251,7 +319,7 @@ class Unit {
             this.x = wp.x;
             this.y = wp.y;
             this.waypointIndex++;
-            if (this.waypointIndex >= this.path.length) {
+            if (this.waypointIndex >= this.path.length && !keepAttacking) {
                 this.state = 'idle';
             }
         } else {
@@ -261,65 +329,94 @@ class Unit {
     }
 
     autoScanForEnemies(game) {
-        let bestTarget = null;
-        let closestDist = this.aggroRadius;
-
-        for (const u of game.units) {
-            if (u.isEnemy !== this.isEnemy && u.hp > 0) {
-                const dist = Math.hypot(u.x - this.x, u.y - this.y);
-                if (dist <= closestDist) {
-                    closestDist = dist;
-                    bestTarget = u;
-                }
-            }
-        }
-
-        if (!bestTarget) {
-            for (const b of game.buildings) {
-                if (b.isEnemy !== this.isEnemy && b.hp > 0) {
-                    const cx = b.gx + b.w * 0.5;
-                    const cy = b.gy + b.h * 0.5;
-                    const dist = Math.hypot(cx - this.x, cy - this.y);
-                    if (dist <= closestDist + 2.0) {
-                        closestDist = dist;
-                        bestTarget = b;
-                    }
-                }
-            }
-        }
+        const bestTarget = findNearestUnit(game, this.x, this.y, this.aggroRadius, u =>
+            u.isEnemy !== this.isEnemy && u.hp > 0 &&
+            !(u.isConcealed && u.isConcealed() && Math.hypot(u.x - this.x, u.y - this.y) > 1.5));
 
         if (bestTarget) {
             this.attackTarget(bestTarget, game);
+            return;
+        }
+
+        let bestBuilding = null;
+        let closestDist = this.aggroRadius + 2.0;
+        for (const b of game.buildings) {
+            if (b.isEnemy !== this.isEnemy && b.hp > 0) {
+                const cx = b.gx + b.w * 0.5;
+                const cy = b.gy + b.h * 0.5;
+                const dist = Math.hypot(cx - this.x, cy - this.y);
+                if (dist <= closestDist) {
+                    closestDist = dist;
+                    bestBuilding = b;
+                }
+            }
+        }
+        if (bestBuilding) {
+            this.attackTarget(bestBuilding, game);
+            return;
+        }
+
+        // Siege-wave attackers with nothing nearby resume the march on the keep.
+        if (this.isEnemy && this.waveId && game.playerKeep && game.playerKeep.hp > 0) {
+            this.attackTarget(game.playerKeep, game);
         }
     }
 
+    /** Nearest opposing structure whose footprint is within reach of this unit. */
+    findBlockingStructure(game) {
+        let best = null;
+        let bestD = 2.2;
+        for (const b of game.buildings) {
+            if (b.isEnemy === this.isEnemy || b.hp <= 0) continue;
+            const dx = Math.max(b.gx - this.x, 0, this.x - (b.gx + b.w));
+            const dy = Math.max(b.gy - this.y, 0, this.y - (b.gy + b.h));
+            const d = Math.hypot(dx, dy);
+            if (d < bestD) {
+                bestD = d;
+                best = b;
+            }
+        }
+        return best;
+    }
+
+    currentAttack() {
+        return Math.round(this.atk * (this.empoweredTimer > 0 ? 1.25 : 1));
+    }
+
     performAttack(target, game) {
+        if (this.isStealthy) this.revealedTimer = 3.0;
+        const dmg = this.currentAttack();
+
         if (this.type === 'archer') {
             Sound.playBowTwang();
-            game.spawnProjectile('arrow', this.x, this.y, target, this.atk);
+            game.spawnProjectile('arrow', this.x, this.y, target, dmg, this);
         } else if (this.type === 'catapult') {
             Sound.playBuild();
-            game.spawnProjectile('boulder', this.x, this.y, target, this.atk);
+            game.spawnProjectile('boulder', this.x, this.y, target, dmg, this);
         } else if (this.type === 'dragon') {
             Sound.playDragonRoar();
-            game.spawnProjectile('fire', this.x, this.y, target, this.atk);
+            game.spawnProjectile('fire', this.x, this.y, target, dmg, this);
         } else {
             // Melee Strike
             Sound.playSwordClash();
-            const killed = target.takeDamage(this.atk);
-            const targetX = target.x !== undefined ? target.x : target.gx + 0.5;
-            const targetY = target.y !== undefined ? target.y : target.gy + 0.5;
-            game.spawnFloatingText(`-${this.atk}`, targetX, targetY, this.isEnemy ? '#ef4444' : '#f59e0b');
+            const killed = target.takeDamage(dmg, this, game);
+            const c = entityCenter(target);
+            game.spawnFloatingText(`-${dmg}`, c.x, c.y, this.isEnemy ? '#ef4444' : '#f59e0b');
+            if (game.fx) {
+                game.fx.emitSparks(c.x, c.y, 5);
+                if (target instanceof Unit && target.type !== 'catapult') game.fx.emitBlood(c.x, c.y, 4);
+            }
 
             // Vampire Lifesteal mechanic
             if (this.isLifesteal && this.hp < this.maxHp) {
-                const healAmt = Math.round(this.atk * 0.35);
+                const healAmt = Math.min(this.maxHp - this.hp, Math.round(dmg * 0.35));
                 this.hp = Math.min(this.maxHp, this.hp + healAmt);
                 game.spawnFloatingText(`+${healAmt} HP`, this.x, this.y, '#dc2626');
+                if (!this.isEnemy && game.campaign) game.campaign.recordLifesteal(healAmt);
             }
 
             if (killed) {
-                if (target instanceof Building) {
+                if (target instanceof Building && game.handleBuildingDestruction) {
                     game.handleBuildingDestruction(target);
                 }
                 this.targetEntity = null;
@@ -328,26 +425,29 @@ class Unit {
         }
     }
 
-    takeDamage(amt) {
+    takeDamage(amt, attacker = null) {
+        if (attacker && attacker.type) this.lastAttackerType = attacker.type;
         this.hp = Math.max(0, this.hp - amt);
         return this.hp <= 0;
     }
 }
 
 class Projectile {
-    constructor(type, startX, startY, target, damage) {
+    constructor(type, startX, startY, target, damage, source = null) {
         this.type = type;
         this.x = startX;
         this.y = startY;
         this.target = target;
         this.damage = damage;
+        this.source = source;
         this.progress = 0;
         this.speed = type === 'arrow' ? 5.5 : type === 'fire' ? 3.8 : 3.0;
 
         this.startX = startX;
         this.startY = startY;
-        this.endX = target.x !== undefined ? target.x : target.gx + (target.w || 1) * 0.5;
-        this.endY = target.y !== undefined ? target.y : target.gy + (target.h || 1) * 0.5;
+        const c = entityCenter(target);
+        this.endX = c.x;
+        this.endY = c.y;
 
         const dx = this.endX - startX;
         const dy = this.endY - startY;
@@ -356,7 +456,7 @@ class Projectile {
     }
 
     update(dt, game) {
-        this.progress += (this.speed * dt) / this.totalDist;
+        this.progress = Math.min(1.0, this.progress + (this.speed * dt) / this.totalDist);
         this.x = this.startX + (this.endX - this.startX) * this.progress;
         this.y = this.startY + (this.endY - this.startY) * this.progress;
 
@@ -366,32 +466,35 @@ class Projectile {
         if (this.progress >= 1.0) {
             // Impact!
             if (this.target && this.target.hp > 0) {
-                const killed = this.target.takeDamage(this.damage);
+                const killed = this.target.takeDamage(this.damage, this.source, game);
                 game.spawnFloatingText(`-${this.damage}`, this.endX, this.endY, this.type === 'fire' ? '#ef4444' : '#f97316');
 
-                if (killed && this.target instanceof Building) {
+                if (killed && this.target instanceof Building && game.handleBuildingDestruction) {
                     game.handleBuildingDestruction(this.target);
                 }
             }
 
+            const sourceIsEnemy = this.source ? this.source.isEnemy : (this.target ? !this.target.isEnemy : null);
+            const isFoe = (u) => u !== this.target && u.hp > 0 && (sourceIsEnemy === null || u.isEnemy !== sourceIsEnemy);
+
             // AoE Splash Damage for Catapults and Dragon Fire
             if (this.type === 'boulder') {
                 Sound.playShatter();
-                game.units.forEach(u => {
-                    if (u !== this.target && Math.hypot(u.x - this.endX, u.y - this.endY) <= 1.8) {
-                        const splashDmg = Math.round(this.damage * 0.45);
-                        u.takeDamage(splashDmg);
-                        game.spawnFloatingText(`-${splashDmg}`, u.x, u.y, '#ea580c');
-                    }
+                if (game.fx) game.fx.emitRubble(this.endX, this.endY, 8);
+                queryUnitsNear(game, this.endX, this.endY, 1.8, isFoe).forEach(u => {
+                    const splashDmg = Math.round(this.damage * 0.45);
+                    u.takeDamage(splashDmg, this.source, game);
+                    game.spawnFloatingText(`-${splashDmg}`, u.x, u.y, '#ea580c');
                 });
             } else if (this.type === 'fire') {
-                game.units.forEach(u => {
-                    if (u !== this.target && Math.hypot(u.x - this.endX, u.y - this.endY) <= 2.2) {
-                        const splashDmg = Math.round(this.damage * 0.4);
-                        u.takeDamage(splashDmg);
-                        game.spawnFloatingText(`-${splashDmg}`, u.x, u.y, '#ef4444');
-                    }
+                if (game.fx) game.fx.emitFlamePatch(this.endX, this.endY, this.source);
+                queryUnitsNear(game, this.endX, this.endY, 2.2, isFoe).forEach(u => {
+                    const splashDmg = Math.round(this.damage * 0.4);
+                    u.takeDamage(splashDmg, this.source, game);
+                    game.spawnFloatingText(`-${splashDmg}`, u.x, u.y, '#ef4444');
                 });
+            } else if (game.fx && this.target instanceof Unit) {
+                game.fx.emitBlood(this.endX, this.endY, 3);
             }
 
             return true; // Finished
@@ -424,4 +527,8 @@ if (typeof globalThis !== 'undefined') {
     globalThis.Unit = Unit;
     globalThis.Projectile = Projectile;
     globalThis.Particle = Particle;
+    globalThis.entityCenter = entityCenter;
+    globalThis.getNextEntityId = getNextEntityId;
+    globalThis.setNextEntityId = setNextEntityId;
+    globalThis.resetEntityIds = resetEntityIds;
 }

@@ -150,6 +150,11 @@ class DevConsole {
                 this.log("/killall - Slay all enemy combatants", 'SYSTEM');
                 this.log("/god - Maximize all resources", 'SYSTEM');
                 this.log("/win - Instantly win current mission", 'SYSTEM');
+                this.log("/fog - Toggle fog of war", 'SYSTEM');
+                this.log("/save [1-3] | /load [1-3|auto] - Save slots", 'SYSTEM');
+                this.log("/stress <n> - Spawn n skirmishing units (perf test)", 'SYSTEM');
+                this.log("/fps - Show frame rate & entity counts", 'SYSTEM');
+                this.log("/objectives - Print mission objective status", 'SYSTEM');
                 this.log("/clear - Clear console screen", 'SYSTEM');
                 break;
 
@@ -208,16 +213,17 @@ class DevConsole {
                     return;
                 }
 
+                const count2 = Math.max(1, Math.min(200, count));
                 const keep = this.game.buildings.find(b => b.type === 'keep' && b.isEnemy === isEnemy);
                 const spawnX = keep ? keep.gx + 1.5 : 25;
                 const spawnY = keep ? keep.gy + 1.5 : 25;
 
-                for (let i = 0; i < count; i++) {
-                    const unit = new Unit(unitType, spawnX + (Math.random() * 2 - 1), spawnY + (Math.random() * 2 - 1), isEnemy, isEnemy ? 'obsidian' : this.game.faction);
+                for (let i = 0; i < count2; i++) {
+                    const unit = new Unit(unitType, spawnX + (Math.random() * 2 - 1), spawnY + 3.5 + Math.random(), isEnemy, isEnemy ? this.game.enemyFaction() : this.game.faction);
                     this.game.units.push(unit);
                 }
 
-                this.log(`Spawned ${count}x ${unitType} (${isEnemy ? 'Enemy' : 'Friendly'})`, 'CHEAT');
+                this.log(`Spawned ${count2}x ${unitType} (${isEnemy ? 'Enemy' : 'Friendly'})`, 'CHEAT');
                 Sound.playSwordClash();
                 break;
             }
@@ -241,15 +247,62 @@ class DevConsole {
             }
 
             case 'speed': {
-                const factor = parseFloat(args[0]) || 1.0;
-                this.game.simSpeed = Math.max(0.25, Math.min(5.0, factor));
+                const factor = parseFloat(args[0]);
+                const speed = Number.isFinite(factor) ? Math.max(0, Math.min(5.0, factor)) : 1;
+                if (GAME_SPEEDS.includes(speed)) this.game.setSpeed(speed);
+                else this.game.simSpeed = speed;
                 this.log(`Game simulation speed set to ${this.game.simSpeed}x`, 'SYSTEM');
+                break;
+            }
+
+            case 'fog':
+                this.game.fog.enabled = !this.game.fog.enabled;
+                if (this.game.minimap) this.game.minimap.markTerrainDirty();
+                this.log(`Fog of war ${this.game.fog.enabled ? 'ENABLED' : 'DISABLED'}`, 'CHEAT');
+                break;
+
+            case 'save': {
+                const slot = `slot${['1', '2', '3'].includes(args[0]) ? args[0] : '1'}`;
+                this.game.saveToSlot(slot);
+                this.log(`Saved to ${slot}`, 'SYSTEM');
+                break;
+            }
+
+            case 'load': {
+                const slot = args[0] === 'auto' ? 'auto' : `slot${['1', '2', '3'].includes(args[0]) ? args[0] : '1'}`;
+                const ok = this.game.loadFromSlot(slot);
+                this.log(ok ? `Loaded ${slot}` : `Could not load ${slot}`, ok ? 'SYSTEM' : 'WARN');
+                break;
+            }
+
+            case 'stress': {
+                const n = Math.max(2, Math.min(400, parseInt(args[0], 10) || 250));
+                for (let i = 0; i < n; i++) {
+                    const enemy = i % 2 === 1;
+                    const u = new Unit(enemy ? 'halberdier' : 'knight', enemy ? 36 + Math.random() * 6 : 24 + Math.random() * 4, 22 + Math.random() * 18, enemy, enemy ? this.game.enemyFaction() : this.game.faction);
+                    this.game.units.push(u);
+                }
+                this.log(`Stress test: spawned ${n} units. Use /fps to monitor.`, 'CHEAT');
+                break;
+            }
+
+            case 'fps':
+                this.log(`FPS ~${Math.round(this.game._fps)} | units ${this.game.units.length} | buildings ${this.game.buildings.length} | projectiles ${this.game.projectiles.length} | fx ${this.game.fx.totalParticles}`, 'SYSTEM');
+                break;
+
+            case 'objectives': {
+                const st = this.game.campaign.getObjectiveStatuses();
+                if (st.length === 0) this.log('No campaign mission active (skirmish).', 'SYSTEM');
+                st.forEach(o => this.log(`${o.done ? '[x]' : '[ ]'} ${o.obj.label} (${o.current}/${o.target})`, 'SYSTEM'));
+                const b = this.game.campaign.evaluateBonus();
+                if (this.game.currentMissionData && this.game.currentMissionData.bonus) this.log(`Bonus: ${this.game.currentMissionData.bonus.label} - ${b.text}`, 'SYSTEM');
                 break;
             }
 
             case 'win':
                 this.log("Cheat victory triggered!", 'CHEAT');
-                this.game.triggerVictory();
+                if (this.game.currentMissionData) this.game.completeMission();
+                else this.game.triggerVictory();
                 break;
 
             case 'lose':
@@ -269,7 +322,7 @@ class DevConsole {
     }
 
     escapeHtml(str) {
-        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 }
 

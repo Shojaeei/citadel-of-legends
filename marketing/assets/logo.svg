@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 240" role="img" aria-label="Citadel of Legends: Shattered Realms logo">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fde68a"/><stop offset="0.55" stop-color="#f59e0b"/><stop offset="1" stop-color="#b45309"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(16 16) scale(0.4)">
+    <path d="M256 52 L420 104 V250 C420 352 346 420 256 462 C166 420 92 352 92 250 V104 Z" fill="#1c1917" stroke="url(#gold)" stroke-width="16"/>
+    <g fill="#d6d3d1" stroke="#292524" stroke-width="5">
+      <path d="M150 360 V250 h22 v-22 h20 v22 h20 v-22 h20 v22 h12 V360 Z"/>
+      <path d="M318 360 V250 h12 v-22 h20 v22 h20 v-22 h20 v22 h22 V360 Z"/>
+      <path d="M206 360 V196 h18 v-24 h22 v24 h20 v-24 h22 v24 h18 V360 Z"/>
+    </g>
+    <path d="M234 360 V312 a22 22 0 0 1 44 0 V360 Z" fill="#0c0a09"/>
+    <path d="M259 112 L304 126 L259 140 Z" fill="url(#gold)"/><path d="M256 172 V112" stroke="#fde68a" stroke-width="6"/>
+  </g>
+  <text x="230" y="128" font-family="MedievalSharp, 'Palatino Linotype', Georgia, serif" font-size="84" textLength="700" lengthAdjust="spacingAndGlyphs" fill="url(#gold)" stroke="#451a03" stroke-width="2">Citadel of Legends</text>
+  <text x="236" y="186" font-family="Cinzel, Georgia, serif" font-size="34" letter-spacing="10" fill="#fde68a">SHATTERED REALMS</text>
+</svg>

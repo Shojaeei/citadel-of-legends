@@ -2,6 +2,8 @@
    Citadel of Legends: Shattered Realms - Configuration & Game Data
    ========================================================================== */
 
+const GAME_VERSION = '1.0.0';
+
 const GAME_CONFIG = {
     gridSize: 64,
     tileWidth: 64,
@@ -16,7 +18,7 @@ const GAME_CONFIG = {
         food: 80
     },
     startingPopulation: {
-        current: 8,
+        current: 6,
         max: 15
     },
     startingPopularity: 80
@@ -262,7 +264,28 @@ const BUILDINGS_DEF = {
         workers: 0,
         isCrucible: true,
         color: '#991b1b'
+    },
+    cauldron: {
+        id: 'cauldron',
+        name: 'Boiling Pitch Cauldron',
+        desc: 'Iron cauldron of seething brimstone. Automatically scalds invaders within 2.5 tiles (consumes 1 Pitch per pour).',
+        category: 'defenses',
+        w: 1, h: 1,
+        hp: 700,
+        cost: { stone: 20, iron: 10, pitch: 10 },
+        workers: 0,
+        isCauldron: true,
+        color: '#9a3412'
     }
+};
+
+/** Vision radii (tiles) used by the Fog of War system. */
+const VISION_DEF = {
+    keep: 12,
+    tower: 10,
+    building: 4,
+    unit: 5,
+    flying: 7
 };
 
 const UNITS_DEF = {
@@ -280,6 +303,7 @@ const UNITS_DEF = {
     },
     archer: {
         id: 'archer',
+        requires: 'archery',
         name: 'Runebow Archer',
         desc: 'Skilled ranged soldier deadly from castle battlements and towers.',
         cost: { gold: 20, wood: 15 },
@@ -292,6 +316,7 @@ const UNITS_DEF = {
     },
     halberdier: {
         id: 'halberdier',
+        requires: 'barracks',
         name: 'Iron Halberdier',
         desc: 'Disciplined infantry armed with armor-piercing polearms. High health.',
         cost: { gold: 28, iron: 12 },
@@ -303,6 +328,7 @@ const UNITS_DEF = {
     },
     knight: {
         id: 'knight',
+        requires: 'barracks',
         name: 'Sun-Blade Knight',
         desc: 'Noble armored champion. Swift and deadly in close quarters.',
         cost: { gold: 55, iron: 25 },
@@ -336,6 +362,7 @@ const UNITS_DEF = {
     },
     catapult: {
         id: 'catapult',
+        requires: 'siege',
         name: 'Siege Catapult',
         desc: 'Heavy timber war engine designed to batter down walls and fortresses from far away.',
         cost: { gold: 90, wood: 50, stone: 15 },
@@ -349,6 +376,7 @@ const UNITS_DEF = {
     },
     paladin: {
         id: 'paladin',
+        requires: 'cathedral',
         name: 'Avalon Paladin',
         desc: 'Holy champion clad in blessed steel. Radiates an aura that heals nearby wounded allies.',
         cost: { gold: 65, iron: 25, honor: 15 },
@@ -361,6 +389,7 @@ const UNITS_DEF = {
     },
     valkyrie: {
         id: 'valkyrie',
+        requires: 'runestone',
         name: 'Frost Valkyrie',
         desc: 'Winged shieldmaiden soaring across obstacles with armor-piercing glacial spears.',
         cost: { gold: 60, iron: 20, honor: 15 },
@@ -373,6 +402,7 @@ const UNITS_DEF = {
     },
     vampire: {
         id: 'vampire',
+        requires: 'crucible',
         name: 'Vampire Bloodknight',
         desc: 'Undead noble of the night. Siphons health from slain adversaries to heal himself in combat.',
         cost: { gold: 70, pitch: 20, honor: 15 },
@@ -381,10 +411,24 @@ const UNITS_DEF = {
         range: 1.3,
         speed: 1.35,
         isLifesteal: true,
+        isStealthy: true,
         color: '#dc2626'
+    },
+    warlord: {
+        id: 'warlord',
+        name: 'Enemy Warlord',
+        desc: 'Commander of the rival host. Slaying the Warlord breaks the enemy chain of command.',
+        cost: { gold: 0 },
+        hp: 1600,
+        atk: 70,
+        range: 1.5,
+        speed: 0.8,
+        isGeneral: true,
+        color: '#f43f5e'
     },
     dragon: {
         id: 'dragon',
+        requires: 'dragonRoost',
         name: 'Faction Dragon',
         desc: 'Apex mythical terror. Flies over terrain and showers foes with destructive breath.',
         cost: { gold: 250, honor: 60 },
@@ -443,79 +487,170 @@ const FACTIONS_DEF = {
     }
 };
 
+/* --------------------------------------------------------------------------
+   Narrative Campaign (v1.0): 3 factions x 3 missions.
+   Objective types are evaluated by CampaignDirector (js/campaign.js):
+     buildings      - own at least one of each listed building type
+     buildingCount  - own >= target of one building type
+     population     - population >= target
+     resource       - stockpile res >= target
+     produced       - cumulative production of res >= target this mission
+     trained        - cumulative recruits of unit type >= target
+     wavesSurvived  - fully repelled siege waves >= target
+     destroyEnemyKeep / destroyBuildingType / killGeneral
+   Bonus types: noStarvation, structuresStanding, generalSlainBy, noBuild,
+     regionKills, timeLimit, minTax, lifesteal, destroyAllTagged
+   -------------------------------------------------------------------------- */
 const CAMPAIGN_MISSIONS = {
     solaris: [
         {
             id: 1,
-            title: 'The Saxon Incursion',
-            objective: 'Build a Hovel, Sawyer, Hunter Camp, and Granary to secure your foundation.',
-            reqBuildings: ['hovel', 'sawyer', 'hunter', 'granary'],
-            targetPop: 12,
-            dialogue: "Sire, the Saxons have pillaged the riverlands! We must establish our citadel's supply lines before their raiders descend."
+            title: 'The Gathering Storm',
+            objective: 'Establish the settlement, grow to 150 population and hoard 800 food.',
+            briefing: 'Storm clouds gather over the Valley of Avalon. Saxon raiders have burned the river farms, and the displaced flock to your banner. Raise hovels, feed the multitude, and fill the granary before winter.',
+            dialogue: "Sire, the Saxons have pillaged the riverlands! Thousands seek refuge. Build homes, fill the granary, and let none go hungry.",
+            waves: { enabled: false },
+            objectives: [
+                { type: 'buildings', types: ['hovel', 'granary', 'sawyer', 'hunter'], label: "Establish the settlement (Hovel, Granary, Sawyer, Hunter's Lodge)" },
+                { type: 'population', target: 150, label: 'Reach 150 population' },
+                { type: 'resource', res: 'food', target: 800, label: 'Hoard 800 food in the granary' }
+            ],
+            bonus: { type: 'noStarvation', label: 'Zero peasant starvation' },
+            startRes: { wood: 400, stone: 180, gold: 300 }
         },
         {
             id: 2,
             title: "Siege of Camelot's Gate",
-            objective: 'Construct a Barracks and recruit 5 Halberdiers and 4 Runebow Archers.',
-            reqUnits: { halberdier: 5, archer: 4 },
-            dialogue: "Enemy vanguard banners spot the horizon. Station archers along the walls and muster the garrison!"
+            objective: 'Survive 5 siege waves using boiling pitch and archer towers.',
+            briefing: "Enemy vanguard banners crest the eastern hills. Camelot's outer towers are all that stand between the horde and the keep. Stockpile pitch, man the towers, and hold for five assaults.",
+            dialogue: "Enemy vanguard banners spot the horizon. Station archers along the walls and keep the pitch boiling!",
+            waves: { enabled: true, firstDelay: 50, interval: 55, max: 5, composition: 'standard' },
+            playerStructures: [
+                { type: 'tower', gx: 25, gy: 24, tag: 'outerTower' },
+                { type: 'tower', gx: 26, gy: 30, tag: 'outerTower' },
+                { type: 'tower', gx: 25, gy: 35, tag: 'outerTower' }
+            ],
+            objectives: [
+                { type: 'wavesSurvived', target: 5, label: 'Survive 5 siege waves' }
+            ],
+            bonus: { type: 'structuresStanding', tag: 'outerTower', label: 'Keep all outer towers standing' },
+            startRes: { pitch: 60, stone: 220, iron: 80, gold: 350 }
         },
         {
             id: 3,
-            title: 'Shadow Over Avalon',
-            objective: 'Erect the Dragon Roost Dais and summon the Solaris Dragon to cleanse the land.',
-            reqBuildings: ['dragonRoost'],
-            reqUnits: { dragon: 1 },
-            dialogue: "The ancient darkness awakens. Only the fire of the Solaris Dragon can break the final siege!"
+            title: "Dragon's Dawn",
+            objective: 'Consecrate the Cathedral, recruit the Solaris Dragon, destroy Blackfang Keep.',
+            briefing: 'The warlord of Blackfang has sworn to drown Avalon in ash. Consecrate the Cathedral of Avalon, awaken the Solaris Dragon, and carry the dawn across the river.',
+            dialogue: "The ancient darkness awakens. Only the fire of the Solaris Dragon can break Blackfang's hold!",
+            waves: { enabled: true, firstDelay: 90, interval: 70, composition: 'standard' },
+            enemyKeepName: 'Blackfang Keep',
+            enemyGeneral: { name: 'Blackfang Warlord' },
+            objectives: [
+                { type: 'buildings', types: ['cathedral'], label: 'Consecrate the Cathedral of Avalon' },
+                { type: 'trained', unit: 'dragon', target: 1, label: 'Recruit the Solaris Dragon' },
+                { type: 'destroyEnemyKeep', label: 'Destroy Blackfang Keep' }
+            ],
+            bonus: { type: 'generalSlainBy', unit: 'dragon', label: 'Slay the enemy general with your Dragon' },
+            startRes: { gold: 450, honor: 60, stone: 260, wood: 300, iron: 100 }
         }
     ],
     frost: [
         {
             id: 1,
-            title: 'Evil Approaches the Glacier',
-            objective: 'Establish a Basalt Quarry and two Hovels in the frozen wastes.',
-            reqBuildings: ['quarry', 'hovel'],
-            dialogue: "The freezing blizzards freeze our marrow. Construct shelters and quarry stone for fortress battlements."
+            title: 'The Glacial Trail',
+            objective: 'Quarry 500 basalt and establish 3 hunter outposts in the frozen tundra.',
+            briefing: 'The Covenant marches north along the Glacial Trail. Timber is scarce and the cold is merciless. Cut basalt from the ice and send rangers to hunt the tundra elk.',
+            dialogue: "The blizzards freeze our marrow. Quarry stone for the battlements and set hunters upon the elk herds.",
+            waves: { enabled: true, firstDelay: 120, interval: 90, max: 2, composition: 'standard' },
+            objectives: [
+                { type: 'produced', res: 'stone', target: 500, label: 'Quarry 500 basalt' },
+                { type: 'buildingCount', building: 'hunter', target: 3, label: 'Establish 3 hunter outposts' }
+            ],
+            bonus: { type: 'noBuild', building: 'hovel', label: 'Build zero wood cabins (Hovels)' }
         },
         {
             id: 2,
             title: 'Frostpeak Pass Ambush',
-            objective: 'Train 3 Frost Giants and 5 Runebow Archers to defend the mountain pass.',
-            reqUnits: { giant: 3, archer: 5 },
-            dialogue: "Hostile mountain warbands seek to cross Frostpeak. Let our Frost Giants shatter their advance!"
+            objective: 'Repel the armored cavalry with Frost Giants and Valkyrie dive strikes.',
+            briefing: 'Armored cavalry thunder toward Frostpeak Pass. Wake the Frost Giants from the mountain halls and call the Valkyries down from the storm. The bridge is the bottleneck: make it a graveyard.',
+            dialogue: "Hostile riders seek to cross Frostpeak. Let our Giants shatter their charge at the bridge!",
+            waves: { enabled: true, firstDelay: 70, interval: 55, max: 4, composition: 'cavalry' },
+            objectives: [
+                { type: 'trained', unit: 'giant', target: 2, label: 'Muster 2 Frost Giants' },
+                { type: 'trained', unit: 'valkyrie', target: 2, label: 'Summon 2 Frost Valkyries' },
+                { type: 'wavesSurvived', target: 4, label: 'Repel 4 cavalry charges' }
+            ],
+            bonus: { type: 'regionKills', target: 25, region: { x0: 26, y0: 26, x1: 37, y1: 35 }, label: 'Slay 25 enemies in the pass bottleneck' },
+            startRes: { gold: 500, iron: 160, stone: 180, honor: 40 }
         },
         {
             id: 3,
-            title: 'Wrath of the Ice Wyvern',
-            objective: 'Erect the Dragon Roost and hatch the Ice Wyvern.',
-            reqBuildings: ['dragonRoost'],
-            reqUnits: { dragon: 1 },
-            dialogue: "The Wyvern stirs beneath the glacial peaks. Awaken the beast and claim mastery over the North!"
+            title: "The Ice Wyvern's Domain",
+            objective: 'Raise the Aerie, hatch the Ice Wyvern and vanquish the Northern Warlord.',
+            briefing: 'Beneath the glacial summit sleeps an Ice Wyvern egg older than the Covenant itself. Raise an aerie on the mountain, hatch the beast, and end the Northern Warlord who would claim it.',
+            dialogue: "The Wyvern stirs beneath the glacial peaks. Awaken the beast and claim mastery over the North!",
+            waves: { enabled: true, firstDelay: 100, interval: 70, composition: 'standard' },
+            enemyKeepName: "Warlord's Hold",
+            enemyGeneral: { name: 'Northern Warlord' },
+            objectives: [
+                { type: 'buildings', types: ['dragonRoost'], label: 'Raise the Wyvern Aerie on the glacier' },
+                { type: 'trained', unit: 'dragon', target: 1, label: 'Hatch the Ice Wyvern' },
+                { type: 'killGeneral', label: 'Vanquish the Northern Warlord' }
+            ],
+            bonus: { type: 'timeLimit', seconds: 720, label: 'Complete in under 12 minutes' },
+            startRes: { gold: 450, honor: 70, stone: 300, wood: 260, iron: 120 }
         }
     ],
     obsidian: [
         {
             id: 1,
-            title: 'Transylvanian Night',
-            objective: 'Erect a Brimstone Tar Rig and Sawyer in the blighted bog.',
-            reqBuildings: ['tar', 'sawyer'],
-            dialogue: "Darkness falls upon the valley. Siphon the brimstone pitch to prepare our boiling defenses."
+            title: 'Transylvanian Reckoning',
+            objective: 'Harvest 300 brimstone and build 4 Boiling Pitch Cauldrons.',
+            briefing: 'The peasants whisper of a reckoning. Let them whisper - and pay. Tap the brimstone seams beneath the bog and ring the keep with cauldrons of boiling pitch.',
+            dialogue: "Darkness falls upon the valley. Siphon the brimstone and prepare our boiling defenses. And the tithe stays High.",
+            waves: { enabled: true, firstDelay: 120, interval: 80, max: 3, composition: 'standard' },
+            taxes: 2,
+            objectives: [
+                { type: 'produced', res: 'pitch', target: 300, label: 'Harvest 300 brimstone pitch' },
+                { type: 'buildingCount', building: 'cauldron', target: 4, label: 'Build 4 Boiling Pitch Cauldrons' }
+            ],
+            bonus: { type: 'minTax', min: 2, label: 'Never lower tax rate below High' },
+            startRes: { gold: 300, stone: 200, iron: 80 }
         },
         {
             id: 2,
             title: 'Blood Crucible Bastion',
-            objective: 'Summon 5 Night-Stalker Werewolves and erect an Archery Range.',
-            reqUnits: { werewolf: 5 },
-            reqBuildings: ['archery'],
-            dialogue: "The moonlight beckons. Release the wolf pack upon the mortal invaders!"
+            objective: 'Raise Vampire Bloodknights and infiltrate the enemy garrison.',
+            briefing: 'A mortal garrison squats upon the old Crucible grounds. Raise a Blood Crucible, call forth the Bloodknights, and let them slip unseen past the watchtowers to raze the barracks.',
+            dialogue: "The moonlight beckons. Our Bloodknights walk unseen - feast upon the garrison!",
+            waves: { enabled: true, firstDelay: 90, interval: 65, composition: 'standard' },
+            objectives: [
+                { type: 'trained', unit: 'vampire', target: 3, label: 'Raise 3 Vampire Bloodknights' },
+                { type: 'destroyBuildingType', building: 'barracks', label: 'Infiltrate and raze the enemy garrison barracks' }
+            ],
+            bonus: { type: 'lifesteal', target: 1000, label: 'Regenerate 1000 HP via lifesteal' },
+            startRes: { gold: 500, honor: 60, pitch: 100, stone: 220, wood: 220 }
         },
         {
             id: 3,
             title: 'Eclipse of the Abyss',
-            objective: 'Summon the Abyss Dragon and annihilate the rival fortress.',
-            reqBuildings: ['dragonRoost'],
-            reqUnits: { dragon: 1 },
-            dialogue: "The eclipse is upon us! Unleash the Abyss Dragon to swallow their citadel in ash."
+            objective: 'Build 3 catapults, summon the Abyss Dragon and breach the Imperial Citadel.',
+            briefing: 'The eclipse is upon us. The Imperial Citadel hides behind three great gatehouses. Batter them with catapults, then unleash the Abyss Dragon upon the throne room.',
+            dialogue: "The eclipse is upon us! Unleash the Abyss Dragon to swallow their citadel in ash.",
+            waves: { enabled: true, firstDelay: 100, interval: 65, composition: 'standard' },
+            enemyKeepName: 'Imperial Citadel',
+            enemyStructures: [
+                { type: 'gatehouse', gx: 42, gy: 28, tag: 'enemyGate' },
+                { type: 'gatehouse', gx: 42, gy: 31, tag: 'enemyGate' },
+                { type: 'gatehouse', gx: 46, gy: 26, tag: 'enemyGate' }
+            ],
+            objectives: [
+                { type: 'trained', unit: 'catapult', target: 3, label: 'Build 3 siege catapults' },
+                { type: 'trained', unit: 'dragon', target: 1, label: 'Summon the Abyss Dragon' },
+                { type: 'destroyEnemyKeep', label: 'Breach the Imperial Citadel' }
+            ],
+            bonus: { type: 'destroyAllTagged', tag: 'enemyGate', label: 'Destroy all enemy gatehouses' },
+            startRes: { gold: 600, honor: 70, wood: 360, stone: 260, iron: 120 }
         }
     ]
 };
@@ -526,4 +661,6 @@ if (typeof globalThis !== 'undefined') {
     globalThis.UNITS_DEF = UNITS_DEF;
     globalThis.FACTIONS_DEF = FACTIONS_DEF;
     globalThis.CAMPAIGN_MISSIONS = CAMPAIGN_MISSIONS;
+    globalThis.VISION_DEF = VISION_DEF;
+    globalThis.GAME_VERSION = GAME_VERSION;
 }

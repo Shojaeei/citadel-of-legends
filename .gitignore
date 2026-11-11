@@ -19,3 +19,11 @@ yarn-error.log*
 tmp/
 temp/
 tests/*.png
+
+# Node / build tooling
+node_modules/
+desktop/node_modules/
+desktop/app/
+desktop/release/
+dist-ci/
+supporter_codes*.csv

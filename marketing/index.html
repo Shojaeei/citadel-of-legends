@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Citadel of Legends: Shattered Realms — Free Castle-Builder RTS in Your Browser</title>
+    <meta name="description" content="Raise a medieval citadel, feed your people and hold the walls against dragon-backed sieges. Three asymmetric factions, a 9-mission campaign, fog of war and offline play. Free in your browser.">
+    <meta name="theme-color" content="#0c0a09">
+    <link rel="icon" type="image/svg+xml" href="../icons/icon.svg">
+    <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Citadel of Legends: Shattered Realms">
+    <meta property="og:description" content="Tactical castle-builder RTS: three asymmetric factions, a 9-mission campaign and real-time siege warfare. Play free in your browser — no install.">
+    <meta property="og:image" content="assets/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Citadel of Legends: Shattered Realms">
+    <meta name="twitter:description" content="Free browser castle-builder RTS with dragons, boiling pitch and a 9-mission campaign.">
+    <meta name="twitter:image" content="assets/og-image.png">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "Citadel of Legends: Shattered Realms",
+        "description": "Tactical medieval castle-builder and real-time strategy game with three asymmetric factions, a 9-mission narrative campaign and siege warfare.",
+        "genre": ["Strategy", "Real-time strategy", "City builder"],
+        "gamePlatform": ["Web browser", "Windows", "macOS", "Linux"],
+        "applicationCategory": "Game",
+        "operatingSystem": "Any (HTML5)",
+        "playMode": "SinglePlayer",
+        "image": "assets/og-image.png",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD", "availability": "https://schema.org/InStock" }
+    }
+    </script>
+    <style>
+        @font-face { font-family: 'Cinzel'; font-weight: 400 900; font-display: swap; src: url('../assets/fonts/cinzel-latin-var.woff2') format('woff2'); }
+        @font-face { font-family: 'MedievalSharp'; font-display: swap; src: url('../assets/fonts/medievalsharp-latin.woff2') format('woff2'); }
+
+        :root {
+            --bg: #0c0a09;
+            --bg-2: #1c1917;
+            --panel: #231d19;
+            --line: #44342a;
+            --gold: #f59e0b;
+            --gold-hi: #fde68a;
+            --ember: #b45309;
+            --text: #f5f5f4;
+            --muted: #b8aea6;
+            --solaris: #f59e0b;
+            --frost: #38bdf8;
+            --obsidian: #ef4444;
+            --radius: 14px;
+            --maxw: 1160px;
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Cinzel', Georgia, serif; line-height: 1.6; }
+        a { color: var(--gold-hi); }
+        img { max-width: 100%; display: block; }
+        .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 20px; }
+        .skip { position: absolute; left: -9999px; top: 8px; background: var(--gold); color: #000; padding: 8px 14px; border-radius: 8px; z-index: 100; }
+        .skip:focus { left: 8px; }
+        :focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 3px; }
+
+        /* Nav */
+        header.nav { position: sticky; top: 0; z-index: 50; background: rgba(12,10,9,.86); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+        header.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
+        .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--gold); font-family: 'MedievalSharp', serif; font-size: 22px; }
+        .brand img { width: 34px; height: 34px; }
+        nav ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+        nav a { color: var(--muted); text-decoration: none; }
+        nav a:hover { color: var(--gold-hi); }
+        @media (max-width: 820px) { nav ul { display: none; } }
+
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 26px; border-radius: 12px; font-family: 'Cinzel', serif; font-weight: 700; font-size: 16px; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; cursor: pointer; border: 1px solid transparent; transition: transform .15s ease, box-shadow .15s ease, background .15s; min-height: 48px; }
+        .btn:active { transform: translateY(1px); }
+        .btn-primary { background: linear-gradient(180deg, #f59e0b, #b45309); color: #1c0f02; border-color: var(--gold-hi); box-shadow: 0 10px 30px -8px rgba(245,158,11,.6); }
+        .btn-primary:hover { box-shadow: 0 14px 40px -6px rgba(245,158,11,.8); transform: translateY(-1px); }
+        .btn-ghost { background: rgba(28,25,23,.7); color: var(--gold-hi); border-color: var(--ember); }
+        .btn-ghost:hover { border-color: var(--gold); }
+        .btn-sm { padding: 9px 16px; font-size: 13px; min-height: 40px; }
+
+        /* Hero */
+        .hero { position: relative; min-height: min(92vh, 860px); display: grid; place-items: center; overflow: hidden; border-bottom: 1px solid var(--line); }
+        #hero-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .hero::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, rgba(12,10,9,.15), rgba(12,10,9,.85) 70%), linear-gradient(to bottom, transparent 60%, var(--bg)); pointer-events: none; }
+        .hero-content { position: relative; z-index: 2; text-align: center; padding: 80px 20px 60px; max-width: 900px; }
+        .eyebrow { display: inline-block; padding: 6px 14px; border: 1px solid rgba(245,158,11,.4); background: rgba(69,26,3,.5); border-radius: 999px; color: var(--gold-hi); font-size: 12px; letter-spacing: .25em; text-transform: uppercase; }
+        h1 { font-family: 'MedievalSharp', serif; font-weight: 400; font-size: clamp(44px, 8vw, 96px); line-height: 1.02; margin: 18px 0 6px; color: var(--gold); text-shadow: 0 6px 18px rgba(0,0,0,.9); }
+        .sub { font-size: clamp(14px, 2vw, 20px); letter-spacing: .3em; text-transform: uppercase; color: var(--gold-hi); margin-bottom: 18px; }
+        .lede { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(17px, 2.1vw, 21px); color: #e7e5e4; max-width: 680px; margin: 0 auto 30px; }
+        .cta-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+        .cta-note { margin-top: 14px; font-size: 12px; color: var(--muted); letter-spacing: .05em; }
+        .badges { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 34px; }
+        .badge { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; border: 1px solid var(--line); background: rgba(28,25,23,.75); color: var(--muted); padding: 6px 12px; border-radius: 999px; }
+        .badge b { color: var(--gold-hi); font-weight: 700; }
+
+        section { padding: 96px 0; }
+        .section-head { text-align: center; max-width: 720px; margin: 0 auto 48px; }
+        .section-head h2 { font-family: 'MedievalSharp', serif; font-weight: 400; font-size: clamp(32px, 5vw, 52px); color: var(--gold); margin: 0 0 10px; }
+        .section-head p { font-family: Georgia, serif; color: var(--muted); font-size: 18px; margin: 0; }
+
+        /* Features */
+        .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+        @media (max-width: 900px) { .features { grid-template-columns: 1fr; } }
+        .feature { background: linear-gradient(160deg, #292524, #171311); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; position: relative; overflow: hidden; transition: border-color .2s, transform .2s; }
+        .feature:hover { border-color: var(--ember); transform: translateY(-3px); }
+        .feature .icon { font-size: 34px; }
+        .feature h3 { margin: 10px 0 8px; font-size: 21px; color: var(--gold-hi); }
+        .feature p { font-family: Georgia, serif; color: #d6d3d1; margin: 0 0 14px; }
+        .feature ul { margin: 0; padding-left: 18px; font-family: Georgia, serif; color: var(--muted); font-size: 15px; }
+        .feature button { margin-top: 14px; background: none; border: 0; color: var(--gold); font-family: 'Cinzel', serif; font-weight: 700; cursor: pointer; padding: 6px 0; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+        .feature .more { display: none; margin-top: 10px; font-family: Georgia, serif; color: #d6d3d1; font-size: 15px; }
+        .feature.open .more { display: block; }
+
+        /* Factions */
+        .tabs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 28px; }
+        .tab { background: var(--panel); border: 1px solid var(--line); color: var(--muted); padding: 12px 20px; border-radius: 999px; font-family: 'Cinzel', serif; font-weight: 700; cursor: pointer; letter-spacing: .06em; min-height: 46px; }
+        .tab[aria-selected="true"] { color: #120a02; background: var(--accent, var(--gold)); border-color: var(--accent, var(--gold)); }
+        .faction-panel { display: grid; grid-template-columns: 260px 1fr; gap: 34px; background: linear-gradient(160deg, #241e1a, #120f0d); border: 1px solid var(--line); border-radius: 18px; padding: 34px; border-top: 3px solid var(--accent, var(--gold)); }
+        @media (max-width: 820px) { .faction-panel { grid-template-columns: 1fr; text-align: center; } .faction-panel .crest { margin: 0 auto; } }
+        .crest { width: 220px; filter: drop-shadow(0 12px 24px rgba(0,0,0,.7)); }
+        .faction-panel h3 { margin: 0; font-family: 'MedievalSharp', serif; font-weight: 400; font-size: 38px; color: var(--accent, var(--gold)); }
+        .ruler { color: var(--muted); letter-spacing: .12em; text-transform: uppercase; font-size: 13px; margin-bottom: 12px; }
+        .lore { font-family: Georgia, serif; font-size: 17px; color: #e7e5e4; }
+        .stat-table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 14px; }
+        .stat-table caption { text-align: left; color: var(--gold-hi); font-weight: 700; padding-bottom: 6px; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; }
+        .stat-table th, .stat-table td { border-bottom: 1px solid var(--line); padding: 8px 6px; text-align: left; }
+        .stat-table th { color: var(--muted); font-weight: 600; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+        .bar { height: 6px; border-radius: 3px; background: #3a2e26; overflow: hidden; min-width: 60px; }
+        .bar span { display: block; height: 100%; background: var(--accent, var(--gold)); }
+        .bonus-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+        .bonus-list span { font-size: 12px; border: 1px solid var(--line); padding: 4px 10px; border-radius: 999px; color: var(--gold-hi); }
+
+        /* Campaign */
+        .missions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        @media (max-width: 900px) { .missions { grid-template-columns: 1fr; } }
+        .mission { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 12px; padding: 18px; }
+        .mission .num { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); }
+        .mission h4 { margin: 4px 0 6px; font-size: 18px; color: var(--text); }
+        .mission p { margin: 0; font-family: Georgia, serif; color: var(--muted); font-size: 15px; }
+
+        /* Media */
+        .gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        @media (max-width: 760px) { .gallery { grid-template-columns: 1fr; } }
+        .gallery figure { margin: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: #000; cursor: zoom-in; }
+        .gallery figure.wide { grid-column: 1 / -1; }
+        .gallery figcaption { padding: 10px 14px; font-size: 13px; color: var(--muted); background: var(--panel); }
+        .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.92); display: none; place-items: center; z-index: 90; padding: 20px; }
+        .lightbox.open { display: grid; }
+        .lightbox img { max-height: 90vh; border-radius: 10px; }
+        .lightbox button { position: absolute; top: 16px; right: 20px; background: none; border: 0; color: #fff; font-size: 40px; cursor: pointer; }
+
+        /* Tech */
+        .tech { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+        @media (max-width: 900px) { .tech { grid-template-columns: repeat(2, 1fr); } }
+        .tech div { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; text-align: center; }
+        .tech b { display: block; color: var(--gold-hi); font-size: 15px; margin-bottom: 4px; }
+        .tech span { font-family: Georgia, serif; color: var(--muted); font-size: 14px; }
+
+        /* Community */
+        .community { display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; align-items: center; background: radial-gradient(ellipse at top left, #3b1d08, #120f0d 70%); border: 1px solid var(--line); border-radius: 18px; padding: 40px; }
+        @media (max-width: 820px) { .community { grid-template-columns: 1fr; padding: 26px; } }
+        .community h2 { font-family: 'MedievalSharp', serif; font-weight: 400; color: var(--gold); font-size: 40px; margin: 0 0 8px; }
+        .community p { font-family: Georgia, serif; color: #d6d3d1; }
+        form.signup { display: grid; gap: 12px; }
+        form.signup label.field { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+        form.signup input[type=email] { width: 100%; padding: 14px; border-radius: 10px; border: 1px solid var(--line); background: #0c0a09; color: var(--text); font-size: 16px; font-family: Georgia, serif; }
+        form.signup input[type=email]:focus { border-color: var(--gold); outline: none; }
+        .check { display: flex; gap: 10px; align-items: flex-start; font-family: Georgia, serif; font-size: 14px; color: var(--muted); }
+        .check input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--gold); }
+        .form-status { min-height: 1.4em; font-family: Georgia, serif; font-size: 15px; }
+        .form-status.ok { color: #86efac; }
+        .form-status.err { color: #fca5a5; }
+
+        /* FAQ */
+        .faq { max-width: 820px; margin: 0 auto; }
+        .faq details { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; }
+        .faq summary { cursor: pointer; font-weight: 700; color: var(--gold-hi); }
+        .faq p { font-family: Georgia, serif; color: #d6d3d1; margin: 10px 0 0; }
+
+        footer { border-top: 1px solid var(--line); padding: 40px 0; color: var(--muted); font-size: 13px; }
+        footer .wrap { display: flex; flex-wrap: wrap; gap: 18px; justify-content: space-between; align-items: center; }
+        footer a { color: var(--muted); }
+        footer a:hover { color: var(--gold-hi); }
+
+        .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }
+        .reveal.in { opacity: 1; transform: none; }
+        @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+    </style>
+</head>
+<body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="nav">
+        <div class="wrap">
+            <a class="brand" href="#top" aria-label="Citadel of Legends home"><img src="../icons/icon.svg" alt="" width="34" height="34"> Citadel of Legends</a>
+            <nav aria-label="Primary">
+                <ul>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#factions">Factions</a></li>
+                    <li><a href="#campaign">Campaign</a></li>
+                    <li><a href="#media">Media</a></li>
+                    <li><a href="presskit.html">Press</a></li>
+                </ul>
+            </nav>
+            <a class="btn btn-primary btn-sm" href="../index.html" data-cta="nav-play">Play Free</a>
+        </div>
+    </header>
+
+    <main id="main">
+        <!-- HERO -->
+        <section class="hero" id="top" aria-label="Introduction">
+            <canvas id="hero-canvas" aria-hidden="true"></canvas>
+            <div class="hero-content">
+                <span class="eyebrow">Tactical Castle-Builder &bull; Real-Time Siege Warfare</span>
+                <h1>Citadel of Legends</h1>
+                <div class="sub">Shattered Realms</div>
+                <p class="lede">Raise a living medieval citadel. Feed your people, tax them carefully, and when the war horns sound, pour boiling pitch from the battlements while your dragon takes to the sky.</p>
+                <div class="cta-row">
+                    <a class="btn btn-primary" href="../index.html" data-cta="hero-play">&#9876; Play Free in Browser</a>
+                    <a class="btn btn-ghost" href="https://github.com/Shojaeei/citadel-of-legends/releases" data-cta="hero-desktop" rel="noopener">&#11015; Download Desktop Edition</a>
+                </div>
+                <div class="cta-note">No account. No install. Works offline once loaded. Windows &bull; macOS &bull; Linux &bull; Chromebook &bull; Tablet</div>
+                <div class="badges" aria-label="Highlights">
+                    <span class="badge"><b>3</b> asymmetric factions</span>
+                    <span class="badge"><b>9</b> story missions</span>
+                    <span class="badge"><b>0</b> downloads to play</span>
+                    <span class="badge"><b>100%</b> offline capable</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- FEATURES -->
+        <section id="features" aria-labelledby="features-title">
+            <div class="wrap">
+                <div class="section-head reveal">
+                    <h2 id="features-title">Build. Feed. Defend.</h2>
+                    <p>Every peasant is a worker, a taxpayer and a mouth to feed. Every wall is a promise you will have to keep when the siege arrives.</p>
+                </div>
+                <div class="features">
+                    <article class="feature reveal">
+                        <div class="icon" aria-hidden="true">&#128737;</div>
+                        <h3>Asymmetric Factions</h3>
+                        <p>Three kingdoms that play nothing alike — not just palette swaps.</p>
+                        <ul>
+                            <li>Solaris: holy Paladins heal the line</li>
+                            <li>Frostbound: Valkyries strike from above</li>
+                            <li>Obsidian: Bloodknights move unseen</li>
+                        </ul>
+                        <button type="button" aria-expanded="false">More &#9662;</button>
+                        <div class="more">Each faction has its own economic multipliers, a signature monument (Cathedral, Runestone or Blood Crucible), a unique champion and its own dragon. Solaris bakes faster and taxes harder; Frostbound quarries stone like no one else; Obsidian marches faster and brews pitch from the dark.</div>
+                    </article>
+                    <article class="feature reveal">
+                        <div class="icon" aria-hidden="true">&#127838;</div>
+                        <h3>Deep Castle Economy</h3>
+                        <p>Seven resources, one fragile popularity rating.</p>
+                        <ul>
+                            <li>Rations vs. famine, taxes vs. revolt</li>
+                            <li>Immigration that rewards good rule</li>
+                            <li>Timber, basalt, mythril, pitch &amp; honor</li>
+                        </ul>
+                        <button type="button" aria-expanded="false">More &#9662;</button>
+                        <div class="more">Happy citadels attract settlers faster; starving ones bleed people. Run extortionate taxes to fund a dragon — if your people will stand for it. Monuments generate Arcane Honor, the currency of legends.</div>
+                    </article>
+                    <article class="feature reveal">
+                        <div class="icon" aria-hidden="true">&#128293;</div>
+                        <h3>Real-Time Siege Warfare</h3>
+                        <p>A* pathfinding armies that breach walls, not walk through them.</p>
+                        <ul>
+                            <li>Boiling pitch cauldrons &amp; watchtowers</li>
+                            <li>Parabolic catapult fire with splash damage</li>
+                            <li>Fog of war, minimap &amp; box selection</li>
+                        </ul>
+                        <button type="button" aria-expanded="false">More &#9662;</button>
+                        <div class="more">Enemy waves path around your defenses, batter down whatever blocks them and turn on defenders who sally out. Dragon breath leaves burning ground. Command at 0x, 1x, 2x or 5x speed.</div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <!-- FACTIONS -->
+        <section id="factions" aria-labelledby="factions-title" style="background: linear-gradient(to bottom, #0c0a09, #15100d 50%, #0c0a09)">
+            <div class="wrap">
+                <div class="section-head reveal">
+                    <h2 id="factions-title">Choose Your Banner</h2>
+                    <p>Explore the three powers of the Shattered Realms. Press play to hear each kingdom's motif.</p>
+                </div>
+                <div class="tabs" role="tablist" aria-label="Factions">
+                    <button class="tab" role="tab" id="tab-solaris" aria-controls="faction-panel" aria-selected="true" data-faction="solaris">&#9728; Solaris Order</button>
+                    <button class="tab" role="tab" id="tab-frost" aria-controls="faction-panel" aria-selected="false" data-faction="frost">&#10052; Frostbound Covenant</button>
+                    <button class="tab" role="tab" id="tab-obsidian" aria-controls="faction-panel" aria-selected="false" data-faction="obsidian">&#129415; Obsidian Scourge</button>
+                </div>
+                <div class="faction-panel reveal" id="faction-panel" role="tabpanel" aria-labelledby="tab-solaris" tabindex="0">
+                    <img class="crest" id="faction-crest" src="assets/crest-solaris.svg" alt="Solaris Order crest" width="220" height="264">
+                    <div>
+                        <h3 id="faction-name">Solaris Order</h3>
+                        <div class="ruler" id="faction-ruler">King Arthur &bull; Verdant Valley</div>
+                        <p class="lore" id="faction-lore"></p>
+                        <div class="bonus-list" id="faction-bonuses"></div>
+                        <table class="stat-table">
+                            <caption>Signature units</caption>
+                            <thead><tr><th scope="col">Unit</th><th scope="col">Health</th><th scope="col">Attack</th><th scope="col">Range</th><th scope="col">Speed</th></tr></thead>
+                            <tbody id="faction-units"></tbody>
+                        </table>
+                        <p style="margin-top:18px"><button class="btn btn-ghost btn-sm" id="faction-audio" type="button">&#9835; Hear the faction motif</button></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CAMPAIGN -->
+        <section id="campaign" aria-labelledby="campaign-title">
+            <div class="wrap">
+                <div class="section-head reveal">
+                    <h2 id="campaign-title">A Nine-Mission Saga</h2>
+                    <p>Three campaigns, each with primary objectives, a bonus challenge and a briefing from the war council.</p>
+                </div>
+                <div class="missions" id="mission-grid"></div>
+            </div>
+        </section>
+
+        <!-- MEDIA -->
+        <section id="media" aria-labelledby="media-title" style="background:#0f0c0a">
+            <div class="wrap">
+                <div class="section-head reveal">
+                    <h2 id="media-title">From the Battlements</h2>
+                    <p>Captured straight from the game engine — no mock-ups.</p>
+                </div>
+                <div class="gallery">
+                    <figure class="wide reveal"><img src="assets/gameplay.gif" alt="Animated gameplay: an Obsidian dragon and pitch cauldrons repel a siege at the river bridge" loading="lazy" width="720" height="405"><figcaption>Dragonfire and boiling pitch hold the bridge.</figcaption></figure>
+                    <figure class="reveal"><img src="assets/screenshots/02_solaris_siege.png" alt="Solaris citadel with walls, watchtowers and a dragon defending the river crossing" loading="lazy" width="1920" height="1080"><figcaption>Solaris Order: the cathedral and the walls of Avalon.</figcaption></figure>
+                    <figure class="reveal"><img src="assets/screenshots/03_frost_bridge_battle.png" alt="Frostbound fortress in the snow as an enemy wave is cut down at the wall gap" loading="lazy" width="1920" height="1080"><figcaption>Frostbound Covenant: the bridge becomes a graveyard.</figcaption></figure>
+                    <figure class="reveal"><img src="assets/screenshots/04_obsidian_dragonfire.png" alt="Obsidian Scourge stronghold in the blighted wastes with ash falling" loading="lazy" width="1920" height="1080"><figcaption>Obsidian Scourge: ash, pitch and blood.</figcaption></figure>
+                    <figure class="reveal"><img src="assets/screenshots/05_mission_briefing.png" alt="Mission briefing screen for Frostpeak Pass Ambush listing objectives" loading="lazy" width="1920" height="1080"><figcaption>Every mission opens with a war-council briefing.</figcaption></figure>
+                </div>
+            </div>
+        </section>
+
+        <!-- TECH / SOCIAL PROOF -->
+        <section aria-labelledby="tech-title">
+            <div class="wrap">
+                <div class="section-head reveal">
+                    <h2 id="tech-title">Forged Without Engines</h2>
+                    <p>Every pixel drawn and every sound synthesized live in your browser.</p>
+                </div>
+                <div class="tech reveal">
+                    <div><b>HTML5 Canvas</b><span>Hand-built 2.5D isometric renderer</span></div>
+                    <div><b>Web Audio API</b><span>Procedural music &amp; soundscapes — zero audio files</span></div>
+                    <div><b>Zero Dependencies</b><span>No engine, no framework, no tracking</span></div>
+                    <div><b>Works Offline</b><span>Installable PWA &amp; desktop builds</span></div>
+                    <div><b>Free to Play</b><span>Optional Royal Supporter Edition</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- COMMUNITY -->
+        <section id="community" aria-labelledby="community-title">
+            <div class="wrap">
+                <div class="community reveal">
+                    <div>
+                        <h2 id="community-title">Join the War Council</h2>
+                        <p>Get launch news, new campaign chapters and the occasional developer diary. One email a month at most. Unsubscribe in one click.</p>
+                        <p><a class="btn btn-ghost btn-sm" href="https://discord.gg/REPLACE_ME" rel="noopener" data-cta="discord" id="discord-link">&#128172; Join the Discord</a></p>
+                    </div>
+                    <!-- Configure data-endpoint with your email provider's form URL before launch (see docs/LAUNCH_CHECKLIST.md). -->
+                    <form class="signup" id="signup" data-endpoint="" novalidate>
+                        <label class="field" for="signup-email">Email address</label>
+                        <input id="signup-email" name="email" type="email" autocomplete="email" required placeholder="you@example.com">
+                        <label class="check"><input type="checkbox" id="signup-consent" required> <span>I am 16 or older and agree to receive updates. See the <a href="../docs/PRIVACY.md">Privacy Policy</a>.</span></label>
+                        <button class="btn btn-primary" type="submit">Enlist</button>
+                        <div class="form-status" id="signup-status" role="status" aria-live="polite"></div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section aria-labelledby="faq-title" style="padding-top:20px">
+            <div class="wrap">
+                <div class="section-head reveal"><h2 id="faq-title">Questions from the Court</h2></div>
+                <div class="faq">
+                    <details><summary>Is it really free?</summary><p>Yes. The full game — all three factions and nine missions — is free. The optional Royal Supporter Edition is a tip that unlocks cosmetic golden banners, developer commentary and an ad-free experience on web portals. It never affects balance.</p></details>
+                    <details><summary>What devices does it run on?</summary><p>Any modern browser: Chrome, Edge, Firefox and Safari on desktop, plus tablets and phones with touch controls (pinch to zoom, long-press to command, on-screen joystick). Desktop builds are available for Windows, macOS and Linux.</p></details>
+                    <details><summary>Do you collect my data?</summary><p>No. Saves and settings stay in your browser on your device. There is no account, analytics or tracking in the game. If you play on an ad-supported portal, that portal's own privacy policy applies. Read our <a href="../docs/PRIVACY.md">Privacy Policy</a>.</p></details>
+                    <details><summary>Can I stream or make videos?</summary><p>Absolutely — including monetized videos. See the Content Creator Permission in our <a href="../docs/EULA.md">EULA</a>. Press and creators can grab assets from the <a href="presskit.html">press kit</a>.</p></details>
+                    <details><summary>Can I play offline?</summary><p>Yes. Once loaded, the game installs as an app (PWA) and runs without a connection. Saves can be exported as <code>.citadelsave</code> files and moved between devices.</p></details>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="wrap">
+            <div>&copy; 2026 [STUDIO LEGAL NAME]. Citadel of Legends&trade; and Shattered Realms&trade;.</div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap">
+                <a href="presskit.html">Press Kit</a>
+                <a href="../docs/PRIVACY.md">Privacy</a>
+                <a href="../docs/TERMS.md">Terms</a>
+                <a href="../docs/EULA.md">EULA</a>
+                <a href="https://github.com/Shojaeei/citadel-of-legends" rel="noopener">GitHub</a>
+            </div>
+        </div>
+    </footer>
+
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Screenshot viewer"><button type="button" aria-label="Close">&times;</button><img alt=""></div>
+
+    <!-- Single source of truth for unit/faction/mission data: the game's own config. -->
+    <script src="../js/config.js"></script>
+    <script src="../js/audio.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // ---------- Hero canvas: animated isometric citadel ----------
+        var canvas = document.getElementById('hero-canvas');
+        var ctx = canvas.getContext('2d');
+        var W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+        var motes = [], arrows = [], t0 = performance.now();
+        function resize() {
+            W = canvas.clientWidth; H = canvas.clientHeight;
+            canvas.width = W * DPR; canvas.height = H * DPR;
+            ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+            motes = [];
+            var n = Math.round(Math.min(120, W / 12));
+            for (var i = 0; i < n; i++) motes.push({ x: Math.random() * W, y: Math.random() * H, r: 0.8 + Math.random() * 2.2, v: 6 + Math.random() * 16, p: Math.random() * 6.28 });
+        }
+        function iso(gx, gy, s) { return { x: W / 2 + (gx - gy) * s, y: H * 0.42 + (gx + gy) * s * 0.5 }; }
+        function prism(gx, gy, w, d, h, s, top, left, right) {
+            var a = iso(gx, gy, s), b = iso(gx + w, gy, s), c = iso(gx + w, gy + d, s), e = iso(gx, gy + d, s);
+            ctx.fillStyle = left; ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(c.x, c.y); ctx.lineTo(c.x, c.y - h); ctx.lineTo(e.x, e.y - h); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = right; ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(b.x, b.y); ctx.lineTo(b.x, b.y - h); ctx.lineTo(c.x, c.y - h); ctx.closePath(); ctx.fill();
+            ctx.fillStyle = top; ctx.beginPath(); ctx.moveTo(a.x, a.y - h); ctx.lineTo(b.x, b.y - h); ctx.lineTo(c.x, c.y - h); ctx.lineTo(e.x, e.y - h); ctx.closePath(); ctx.fill();
+        }
+        function frame(now) {
+            var t = (now - t0) / 1000;
+            var s = Math.max(18, Math.min(W, 1400) / 34);
+            var g = ctx.createLinearGradient(0, 0, 0, H);
+            g.addColorStop(0, '#1a0f08'); g.addColorStop(0.6, '#0e0907'); g.addColorStop(1, '#0c0a09');
+            ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+            // ground diamond
+            for (var x = -7; x <= 7; x++) for (var y = -7; y <= 7; y++) {
+                var p = iso(x, y, s);
+                ctx.fillStyle = (x + y) % 2 === 0 ? 'rgba(21,128,61,.32)' : 'rgba(22,101,52,.32)';
+                if (x >= 3 && x <= 4) ctx.fillStyle = 'rgba(30,64,175,' + (0.35 + 0.08 * Math.sin(t * 2 + y)) + ')';
+                ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + s, p.y + s / 2); ctx.lineTo(p.x, p.y + s); ctx.lineTo(p.x - s, p.y + s / 2); ctx.closePath(); ctx.fill();
+            }
+            // walls & keep
+            for (var k = -4; k <= 2; k++) if (k !== -1) prism(1.6, k, 0.9, 0.9, s * 0.7, s, '#a8a29e', '#57534e', '#78716c');
+            prism(-3, -2, 3, 3, s * 2.4, s, '#b45309', '#78350f', '#92400e');
+            prism(-0.2, -4.2, 1, 1, s * 2.0, s, '#52525b', '#3f3f46', '#52525b');
+            prism(-0.2, 2.2, 1, 1, s * 2.0, s, '#52525b', '#3f3f46', '#52525b');
+            // banner
+            var top = iso(-1.5, -0.5, s);
+            var fy = top.y - s * 2.4 - s * 0.9;
+            ctx.strokeStyle = '#fde68a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(top.x, top.y - s * 2.4); ctx.lineTo(top.x, fy); ctx.stroke();
+            ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.moveTo(top.x, fy);
+            for (var i2 = 0; i2 <= 10; i2++) ctx.lineTo(top.x + i2 * s * 0.08, fy + 4 + Math.sin(t * 5 + i2 * 0.6) * 3);
+            ctx.lineTo(top.x, fy + s * 0.45); ctx.closePath(); ctx.fill();
+            // arrows arcing from towers to the river
+            if (!reduceMotion && Math.random() < 0.05) arrows.push({ t: 0, sx: iso(0.3, -3.7, s), ex: iso(5 + Math.random() * 2, -3 + Math.random() * 6, s) });
+            ctx.strokeStyle = '#e7e5e4'; ctx.lineWidth = 1.5;
+            arrows = arrows.filter(function (a) {
+                a.t += 0.012;
+                var x = a.sx.x + (a.ex.x - a.sx.x) * a.t, y = a.sx.y - s * 2 + (a.ex.y - a.sx.y + s * 2) * a.t - Math.sin(a.t * Math.PI) * s * 2;
+                ctx.beginPath(); ctx.moveTo(x - 4, y - 2); ctx.lineTo(x + 4, y + 2); ctx.stroke();
+                return a.t < 1;
+            });
+            // dragon silhouette circling
+            var dx = W / 2 + Math.cos(t * 0.4) * W * 0.28, dy = H * 0.25 + Math.sin(t * 0.8) * H * 0.06;
+            var flap = Math.sin(t * 6) * 10;
+            ctx.fillStyle = 'rgba(127,29,29,.85)';
+            ctx.beginPath(); ctx.ellipse(dx, dy, 16, 7, 0, 0, 6.28); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(dx - 6, dy); ctx.lineTo(dx - 40, dy - 18 - flap); ctx.lineTo(dx - 14, dy + 4); ctx.closePath(); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(dx + 6, dy); ctx.lineTo(dx + 40, dy - 18 - flap); ctx.lineTo(dx + 14, dy + 4); ctx.closePath(); ctx.fill();
+            // motes
+            for (var m = 0; m < motes.length; m++) {
+                var o = motes[m];
+                if (!reduceMotion) { o.y -= o.v * 0.016; o.x += Math.sin(t + o.p) * 0.3; }
+                if (o.y < -5) { o.y = H + 5; o.x = Math.random() * W; }
+                ctx.globalAlpha = 0.35 + 0.35 * Math.sin(t * 2 + o.p);
+                ctx.fillStyle = '#fcd34d'; ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, 6.28); ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            if (!reduceMotion) requestAnimationFrame(frame);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+        requestAnimationFrame(frame);
+
+        // ---------- Feature cards ----------
+        document.querySelectorAll('.feature button').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var card = btn.closest('.feature');
+                var open = card.classList.toggle('open');
+                btn.setAttribute('aria-expanded', String(open));
+                btn.innerHTML = open ? 'Less &#9652;' : 'More &#9662;';
+            });
+        });
+
+        // ---------- Faction explorer (data from js/config.js) ----------
+        var LORE = {
+            solaris: 'From the verdant Valley of Avalon, King Arthur’s chivalric realm holds the river crossings with Sun-Blade Knights and the healing light of the Cathedral. Their bakeries never cool and their tax rolls never empty.',
+            frost: 'Siegfried the Dragon-Slayer leads a hard clan of the northern peaks. They quarry basalt from the glacier, hunt elk across the tundra and call Valkyries down from the storm when the pass is threatened.',
+            obsidian: 'Count Vlad’s dread lords rule the blighted wastes by fear and brimstone. Their Bloodknights slip unseen past watchtowers, and their cauldrons of boiling pitch turn every gate into a furnace.'
+        };
+        var ACCENT = { solaris: '#f59e0b', frost: '#38bdf8', obsidian: '#ef4444' };
+        var BONUS_LABELS = { taxIncomeMultiplier: 'tax income', foodRateMultiplier: 'food output', stoneRateMultiplier: 'stone output', mineRateMultiplier: 'mythril output', tarRateMultiplier: 'pitch output', unitSpeedMultiplier: 'army speed' };
+        var current = 'solaris';
+        function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+        function renderFaction(f) {
+            current = f;
+            var def = (window.FACTIONS_DEF || {})[f];
+            if (!def) return;
+            var panel = document.getElementById('faction-panel');
+            panel.style.setProperty('--accent', ACCENT[f]);
+            panel.setAttribute('aria-labelledby', 'tab-' + f);
+            document.querySelectorAll('.tab').forEach(function (t) {
+                var sel = t.dataset.faction === f;
+                t.setAttribute('aria-selected', String(sel));
+                t.tabIndex = sel ? 0 : -1;
+                t.style.setProperty('--accent', ACCENT[t.dataset.faction]);
+            });
+            document.getElementById('faction-crest').src = 'assets/crest-' + f + '.svg';
+            document.getElementById('faction-crest').alt = def.name + ' crest';
+            document.getElementById('faction-name').textContent = def.name;
+            var biome = { valley: 'Verdant Valley', tundra: 'Frozen Tundra', wasteland: 'Blighted Wastes' }[def.biome];
+            document.getElementById('faction-ruler').textContent = def.ruler + ' • ' + biome;
+            document.getElementById('faction-lore').textContent = LORE[f];
+            var bonuses = Object.keys(def.bonuses).filter(function (k) { return BONUS_LABELS[k]; }).map(function (k) {
+                return '<span>+' + Math.round((def.bonuses[k] - 1) * 100) + '% ' + esc(BONUS_LABELS[k]) + '</span>';
+            });
+            var bld = window.BUILDINGS_DEF && window.BUILDINGS_DEF[def.bonuses.specialBuilding];
+            if (bld) bonuses.push('<span>Monument: ' + esc(bld.name) + '</span>');
+            document.getElementById('faction-bonuses').innerHTML = bonuses.join('');
+            var units = [def.bonuses.specialUnit, f === 'frost' ? 'giant' : f === 'obsidian' ? 'werewolf' : 'knight', 'dragon'];
+            var maxHp = 1400, maxAtk = 140;
+            document.getElementById('faction-units').innerHTML = units.map(function (k) {
+                var u = window.UNITS_DEF[k];
+                var name = k === 'dragon' ? ({ solaris: 'Solaris Dragon', frost: 'Ice Wyvern', obsidian: 'Abyss Dragon' })[f] : u.name;
+                return '<tr><th scope="row" style="text-transform:none;color:#f5f5f4;font-size:14px">' + esc(name) + '</th>' +
+                    '<td><div class="bar" role="img" aria-label="' + u.hp + ' health"><span style="width:' + Math.round(u.hp / maxHp * 100) + '%"></span></div>' + u.hp + '</td>' +
+                    '<td><div class="bar" role="img" aria-label="' + u.atk + ' attack"><span style="width:' + Math.round(u.atk / maxAtk * 100) + '%"></span></div>' + u.atk + '</td>' +
+                    '<td>' + u.range + '</td><td>' + u.speed + '</td></tr>';
+            }).join('');
+        }
+        var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+        tabs.forEach(function (t, i) {
+            t.addEventListener('click', function () { renderFaction(t.dataset.faction); });
+            t.addEventListener('keydown', function (e) {
+                if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+                var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+                n.focus(); renderFaction(n.dataset.faction);
+            });
+        });
+        document.getElementById('faction-audio').addEventListener('click', function () {
+            if (window.Sound && Sound.previewFaction) Sound.previewFaction(current);
+        });
+        renderFaction('solaris');
+
+        // ---------- Campaign grid ----------
+        var grid = document.getElementById('mission-grid');
+        if (window.CAMPAIGN_MISSIONS) {
+            var html = '';
+            ['solaris', 'frost', 'obsidian'].forEach(function (f) {
+                CAMPAIGN_MISSIONS[f].forEach(function (m) {
+                    html += '<article class="mission reveal" style="--accent:' + ACCENT[f] + '"><div class="num">' + esc(FACTIONS_DEF[f].name) + ' &bull; Mission ' + m.id + '</div><h4>' + esc(m.title) + '</h4><p>' + esc(m.objective) + '</p></article>';
+                });
+            });
+            grid.innerHTML = html;
+        }
+
+        // ---------- Lightbox ----------
+        var lb = document.getElementById('lightbox'), lbImg = lb.querySelector('img'), lastFocus = null;
+        document.querySelectorAll('.gallery figure').forEach(function (fig) {
+            fig.tabIndex = 0;
+            var open = function () { var img = fig.querySelector('img'); lbImg.src = img.src; lbImg.alt = img.alt; lastFocus = fig; lb.classList.add('open'); lb.querySelector('button').focus(); };
+            fig.addEventListener('click', open);
+            fig.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+        });
+        function closeLb() { lb.classList.remove('open'); if (lastFocus) lastFocus.focus(); }
+        lb.addEventListener('click', function (e) { if (e.target === lb || e.target.tagName === 'BUTTON') closeLb(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && lb.classList.contains('open')) closeLb(); });
+
+        // ---------- Newsletter (honest: no fake success without a provider) ----------
+        var form = document.getElementById('signup');
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var status = document.getElementById('signup-status');
+            var email = document.getElementById('signup-email').value.trim();
+            var consent = document.getElementById('signup-consent').checked;
+            status.className = 'form-status';
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 254) { status.textContent = 'Please enter a valid email address.'; status.classList.add('err'); return; }
+            if (!consent) { status.textContent = 'Please confirm you are 16+ and agree to receive updates.'; status.classList.add('err'); return; }
+            var endpoint = form.dataset.endpoint;
+            if (!endpoint) {
+                status.textContent = 'Signups open at launch. Meanwhile, join us on Discord!';
+                status.classList.add('err');
+                return;
+            }
+            status.textContent = 'Sending…';
+            fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ email: email }) })
+                .then(function (r) {
+                    if (!r.ok) throw new Error('status ' + r.status);
+                    status.textContent = 'Check your inbox to confirm your enlistment.';
+                    status.classList.add('ok');
+                    form.reset();
+                })
+                .catch(function () { status.textContent = 'Something went wrong. Please try again later.'; status.classList.add('err'); });
+        });
+
+        // ---------- Scroll reveal ----------
+        if ('IntersectionObserver' in window && !reduceMotion) {
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+            }, { threshold: 0.12 });
+            document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+        } else {
+            document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
+        }
+    })();
+    </script>
+</body>
+</html>
