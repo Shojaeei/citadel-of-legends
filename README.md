@@ -3,10 +3,11 @@
 > **Tactical Medieval Castle Simulation & Fantasy Warfare**  
 > *Inspired by the classic Stronghold series and Stronghold Legends.*
 
-![Citadel of Legends Banner](https://img.shields.io/badge/Status-Phase%202%20Active-emerald?style=for-the-badge)
+![Citadel of Legends Banner](https://img.shields.io/badge/Status-Phase%203%20Verified-emerald?style=for-the-badge)
 ![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero-amber?style=for-the-badge)
 ![HTML5 Canvas](https://img.shields.io/badge/Engine-HTML5%202.5D%20Canvas-blue?style=for-the-badge)
 ![Web Audio](https://img.shields.io/badge/Audio-Procedural%20Web%20Audio%20Synth-purple?style=for-the-badge)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-Shojaeei%2Fcitadel--of--legends-181717?style=for-the-badge&logo=github)](https://github.com/Shojaeei/citadel-of-legends)
 
 ---
 
@@ -77,7 +78,8 @@ d:/Citadel of Legends/
 
 ---
 
-## 🛠️ Documentation Links
+## 🛠️ Documentation & Business Plans
+* [Master Plans & Business Roadmap (v1.0 & Commercial Handoff)](file:///d:/Citadel%20of%20Legends/docs/PLANS.md)
 * [Technical Architecture Guide](file:///d:/Citadel%20of%20Legends/docs/ARCHITECTURE.md)
 * [Comprehensive Gameplay & Strategy Guide](file:///d:/Citadel%20of%20Legends/docs/GAMEPLAY_GUIDE.md)
 * [Development Log & Chat Records](file:///d:/Citadel%20of%20Legends/docs/DEVLOG.md)

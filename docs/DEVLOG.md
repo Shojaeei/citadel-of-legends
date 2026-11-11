@@ -112,3 +112,21 @@ A thorough code review identified the following critical vulnerabilities and des
 6. **Automated Verification Suite:**
    - Headless Node.js test suite with 31 automated tests covering economy, pathfinding, faction passives, splash damage, repair, and tactical abilities, passing with 100% success rate.
 
+---
+
+## 📅 Milestone 6: GitHub Cloud Synchronization, UI Hardening & Commercial Master Plans
+
+### Objectives & Deliverables
+1. **GitHub Repository Provisioning & Remote Tracking:**
+   - Created remote repository: [`Shojaeei/citadel-of-legends`](https://github.com/Shojaeei/citadel-of-legends).
+   - Established upstream tracking on `main` branch.
+2. **Master Plans & Commercial Business Roadmap (`docs/PLANS.md`):**
+   - Authored dual-track roadmap covering v1.0 Gold Master completion (Radar minimap, fog of war, save/load system, 9-mission narrative campaigns, procedural weather FX, spatial hash performance) and Commercial Business infrastructure (Marketing landing page, press kit, PWA/desktop/web portal distribution, monetization hooks, legal compliance suite, and GTM promotional playbook).
+   - Designed complete Autonomous Agent Handoff prompt for zero-friction handoff.
+3. **UI & Campaign Modal Hardening (`index.html`):**
+   - Upgraded modal stacking context (`z-50`) ensuring campaign, skirmish, victory, and defeat modals reliably overlay all canvas and HUD elements.
+   - Improved responsive typography and hover interactions on faction campaign cards.
+4. **Headless Chrome E2E Verification (`tests/test_menu_click.js`):**
+   - Added automated headless browser verification testing DOM event clicks, modal transitions, and canvas lifecycle with visual screenshot proofs.
+
+
