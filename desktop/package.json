@@ -1,0 +1,103 @@
+{
+  "name": "citadel-of-legends-desktop",
+  "productName": "Citadel of Legends",
+  "version": "1.0.0",
+  "description": "Citadel of Legends: Shattered Realms - desktop edition",
+  "main": "main.js",
+  "private": true,
+  "author": "[STUDIO LEGAL NAME]",
+  "license": "SEE LICENSE IN ../docs/EULA.md",
+  "scripts": {
+    "stage": "node scripts/stage.js",
+    "start": "npm run stage && electron .",
+    "dist": "npm run stage && electron-builder --publish never",
+    "dist:win": "npm run stage && electron-builder --win --publish never",
+    "dist:mac": "npm run stage && electron-builder --mac --publish never",
+    "dist:linux": "npm run stage && electron-builder --linux --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.11.1",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "com.citadeloflegends.game",
+    "productName": "Citadel of Legends",
+    "copyright": "Copyright \u00a9 2026 [STUDIO LEGAL NAME]",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "security.js",
+      "app/**/*"
+    ],
+    "asar": true,
+    "icon": "app/icons/icon-512.png",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Citadel-of-Legends-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "mac": {
+      "category": "public.app-category.strategy-games",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "artifactName": "Citadel-of-Legends-${version}-mac-${arch}.${ext}"
+    },
+    "linux": {
+      "category": "Game",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "maintainer": "[SUPPORT EMAIL]",
+      "artifactName": "Citadel-of-Legends-${version}-linux-${arch}.${ext}",
+      "syncDesktopName": true
+    },
+    "publish": null,
+    "executableName": "citadel-of-legends"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Shojaeei/citadel-of-legends.git"
+  },
+  "desktopName": "citadel-of-legends.desktop"
+}
