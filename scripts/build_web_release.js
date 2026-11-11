@@ -43,6 +43,7 @@ const GAME_FILES = [
     'docs/PRIVACY.md',
     'docs/TERMS.md',
     'docs/EULA.md',
+    'LICENSE',
     'js/config.js',
     'js/spatial.js',
     'js/settings.js',
@@ -116,6 +117,7 @@ function websiteEntries() {
         { name: 'docs/PRIVACY.md', data: read('docs/PRIVACY.md') },
         { name: 'docs/TERMS.md', data: read('docs/TERMS.md') },
         { name: 'docs/EULA.md', data: read('docs/EULA.md') },
+        { name: 'LICENSE', data: read('LICENSE') },
         ...gameEntries('play/')
     ];
     return entries;

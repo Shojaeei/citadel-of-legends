@@ -1,0 +1,46 @@
+Citadel of Legends: Shattered Realms
+Copyright (c) 2026 [STUDIO LEGAL NAME]. All rights reserved.
+
+PROPRIETARY SOFTWARE LICENSE
+
+This repository, including all source code, scripts, procedural audio and
+art code, documentation, images, logos, marketing materials and build
+artifacts (together, the "Work"), is proprietary and confidential to
+[STUDIO LEGAL NAME] (the "Owner"), except for the third-party components
+listed below.
+
+The Work is made publicly viewable for transparency and reference only.
+No license or other right is granted to you to copy, modify, merge,
+publish, distribute, sublicense, sell, host, or create derivative works of
+the Work, in whole or in part, except:
+
+  1. as expressly permitted by the End-User License Agreement in
+     docs/EULA.md, which governs the use of distributed game builds
+     (including streaming and video content creation); or
+  2. as permitted by the terms of service of the hosting platform on which
+     this repository is published (for example, viewing and forking on
+     GitHub), solely to the extent required by those terms; or
+  3. with the prior written permission of the Owner.
+
+The names "Citadel of Legends" and "Shattered Realms", the logo and the
+faction crests are trademarks of the Owner and may not be used without
+permission.
+
+THIRD-PARTY COMPONENTS
+
+The following components are NOT covered by this proprietary license and
+remain under their own licenses, copies of which are included:
+
+  - Cinzel typeface: SIL Open Font License 1.1
+    (assets/fonts/OFL-Cinzel.txt)
+  - MedievalSharp typeface: SIL Open Font License 1.1
+    (assets/fonts/OFL-MedievalSharp.txt)
+  - Desktop builds bundle the Electron runtime and Chromium, which are
+    distributed under their own licenses (LICENSE.electron.txt and
+    LICENSES.chromium.html inside each desktop build).
+
+THE WORK IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. IN NO EVENT SHALL THE OWNER BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY ARISING FROM, OUT OF OR IN CONNECTION WITH THE WORK.
+
+For licensing inquiries: [SUPPORT EMAIL]

@@ -2,7 +2,7 @@
 
 **Effective date:** 11 November 2026 · **Version:** 1.0
 
-> **Template notice:** Complete the bracketed placeholders and have this agreement reviewed by qualified counsel. **Open-source decision pending:** if the studio chooses to publish the source code under an open-source licence (e.g. MIT), that licence will govern the *source code* and this EULA will govern only the distributed builds, artwork and trademarks. See `docs/LAUNCH_CHECKLIST.md`. This is not legal advice.
+> **Template notice:** Complete the bracketed placeholders and have this agreement reviewed by qualified counsel. The repository's source code is proprietary (all rights reserved) under the root [`LICENSE`](../LICENSE); this EULA governs the distributed game builds. This is not legal advice.
 
 This EULA is a legal agreement between you and **[STUDIO LEGAL NAME]** ("Licensor") for the game *Citadel of Legends: Shattered Realms*, including its executable code, scripts, procedural audio, visual assets, documentation and updates (the "Software"). By installing, launching or playing the Software you accept this EULA.
 
@@ -10,7 +10,7 @@ This EULA is a legal agreement between you and **[STUDIO LEGAL NAME]** ("Licenso
 Licensor grants you a **personal, non-exclusive, non-transferable, revocable** licence to install and use the Software for your own **non-commercial entertainment**, on devices you own or control, in accordance with this EULA.
 
 ## 2. Ownership
-The Software is **licensed, not sold**. Licensor and its licensors retain all right, title and interest in the Software, including all intellectual-property rights, the names "Citadel of Legends" and "Shattered Realms", logos and faction crests. Public availability of any source code does not by itself grant any licence beyond this EULA unless a separate licence file expressly says so.
+The Software is **licensed, not sold**. Licensor and its licensors retain all right, title and interest in the Software, including all intellectual-property rights, the names "Citadel of Legends" and "Shattered Realms", logos and faction crests. Public availability of the source code does not grant any licence beyond this EULA; the source code is governed by the proprietary [`LICENSE`](../LICENSE).
 
 ## 3. Restrictions
 Except as expressly permitted by this EULA or by applicable law, you may not:
