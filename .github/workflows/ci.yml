@@ -33,3 +33,35 @@ jobs:
           name: web-release
           path: dist-ci/
           retention-days: 14
+
+  desktop-package:
+    # Verifies the Electron edition packages on every OS (unsigned, unpacked;
+    # signed installers are produced by release.yml on version tags).
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install desktop toolchain
+        working-directory: desktop
+        run: npm ci --no-audit --no-fund
+      - name: Package (unpacked, unsigned)
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run stage && npx electron-builder --dir --publish never
+      - name: Verify packaged app contains the game
+        working-directory: desktop
+        shell: bash
+        run: |
+          ls release
+          found=$(find release -name 'app.asar' | head -1)
+          test -n "$found" || { echo "app.asar missing"; exit 1; }
+          echo "Packaged: $found"

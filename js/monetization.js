@@ -100,7 +100,7 @@ class CrazyGamesAdapter {
         this.sdk = null;
     }
     async init() {
-        await loadScript(PORTAL_SDK_URLS.crazygames);
+        await PortalLoader.load(PORTAL_SDK_URLS.crazygames);
         this.sdk = window.CrazyGames && window.CrazyGames.SDK;
         if (this.sdk && this.sdk.init) await this.sdk.init();
         return !!this.sdk;
@@ -128,7 +128,7 @@ class PokiAdapter {
         this.sdk = null;
     }
     async init() {
-        await loadScript(PORTAL_SDK_URLS.poki);
+        await PortalLoader.load(PORTAL_SDK_URLS.poki);
         this.sdk = window.PokiSDK || null;
         if (this.sdk) {
             await this.sdk.init();
@@ -167,7 +167,7 @@ class GameDistributionAdapter {
                 if (event.name === 'SDK_REWARDED_WATCH_COMPLETE') this._rewardGranted = true;
             }
         };
-        await loadScript(PORTAL_SDK_URLS.gamedistribution);
+        await PortalLoader.load(PORTAL_SDK_URLS.gamedistribution);
         return typeof window.gdsdk !== 'undefined';
     }
     gameplayStart() {}
@@ -195,6 +195,9 @@ function loadScript(src) {
         document.head.appendChild(s);
     });
 }
+
+/** Indirection so tests can substitute a fake SDK loader (no network). */
+const PortalLoader = { load: (src) => loadScript(src) };
 
 function createAdapter(portal) {
     switch (portal) {
@@ -356,6 +359,8 @@ if (typeof globalThis !== 'undefined') {
     globalThis.normalizeSupporterCode = normalizeSupporterCode;
     globalThis.NoAdsAdapter = NoAdsAdapter;
     globalThis.createAdapter = createAdapter;
+    globalThis.PortalLoader = PortalLoader;
+    globalThis.PORTAL_SDK_URLS = PORTAL_SDK_URLS;
     globalThis.RESPITE_REWARD = RESPITE_REWARD;
     globalThis.RESPITE_COOLDOWN = RESPITE_COOLDOWN;
     globalThis.INTERSTITIAL_MIN_GAP = INTERSTITIAL_MIN_GAP;

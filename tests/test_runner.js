@@ -1089,6 +1089,107 @@ async function runTests() {
         assert(exists('CHANGELOG.md') && /1\.0\.0/.test(read('CHANGELOG.md')), 'CHANGELOG documents the 1.0.0 release');
     });
 
+    await section('30. Portal SDK Contract Tests (fake SDKs, documented interfaces)', async () => {
+        const loaded = [];
+        const realLoad = PortalLoader.load;
+        PortalLoader.load = async (src) => { loaded.push(src); };
+        const events = [];
+        try {
+            // CrazyGames SDK v3: window.CrazyGames.SDK.{init, game.gameplayStart/Stop, ad.requestAd(type, callbacks)}
+            window.CrazyGames = { SDK: {
+                init: async () => events.push('cg:init'),
+                game: { gameplayStart: () => events.push('cg:start'), gameplayStop: () => events.push('cg:stop') },
+                ad: { requestAd: (type, cb) => { events.push(`cg:ad:${type}`); cb.adStarted(); type === 'rewarded' ? cb.adFinished() : cb.adError('no fill'); } }
+            } };
+            const cg = createAdapter('crazygames');
+            assert(await cg.init() === true && loaded[0] === PORTAL_SDK_URLS.crazygames && events.includes('cg:init'), 'CrazyGames: SDK script loaded from the official URL and initialised');
+            cg.gameplayStart(); cg.gameplayStop();
+            assert(events.includes('cg:start') && events.includes('cg:stop'), 'CrazyGames: gameplay start/stop signalled');
+            assert(await cg.rewarded() === true && events.includes('cg:ad:rewarded'), 'CrazyGames: completed rewarded ad resolves true');
+            await cg.interstitial();
+            assert(events.includes('cg:ad:midgame') && Monetization.adPlaying === false, 'CrazyGames: midgame ad errors never leave the game paused');
+
+            // Poki SDK v2: PokiSDK.{init, gameLoadingFinished, gameplayStart/Stop, commercialBreak, rewardedBreak}
+            window.PokiSDK = {
+                init: async () => events.push('poki:init'),
+                gameLoadingFinished: () => events.push('poki:loaded'),
+                gameplayStart: () => events.push('poki:start'),
+                gameplayStop: () => events.push('poki:stop'),
+                commercialBreak: async () => events.push('poki:break'),
+                rewardedBreak: async () => { events.push('poki:reward'); return false; }
+            };
+            const poki = createAdapter('poki');
+            assert(await poki.init() === true && events.includes('poki:loaded'), 'Poki: init + gameLoadingFinished called');
+            await poki.interstitial();
+            assert(events.includes('poki:break') && !Monetization.adPlaying, 'Poki: commercialBreak runs and play resumes');
+            assert(await poki.rewarded() === false && events.includes('poki:reward'), 'Poki: skipped rewardedBreak grants nothing');
+            window.PokiSDK.commercialBreak = async () => { throw new Error('adblock'); };
+            try { await poki.interstitial(); } catch (e) { /* expected: rejection propagates after cleanup */ }
+            assert(Monetization.adPlaying === false, 'Poki: SDK exceptions still restore audio and simulation');
+
+            // GameDistribution: window.GD_OPTIONS {gameId,onEvent}, gdsdk.showAd(type)
+            BUSINESS_CONFIG.gameDistributionId = 'test-game-id';
+            const gd = createAdapter('gamedistribution');
+            window.gdsdk = { showAd: async (type) => { if (type === 'rewarded') window.GD_OPTIONS.onEvent({ name: 'SDK_REWARDED_WATCH_COMPLETE' }); } };
+            assert(await gd.init() === true && window.GD_OPTIONS.gameId === 'test-game-id', 'GameDistribution: GD_OPTIONS configured before SDK load');
+            assert(await gd.rewarded() === true, 'GameDistribution: SDK_REWARDED_WATCH_COMPLETE grants the reward');
+            assert(await createAdapter('gamedistribution').init.call({ gameId: '' }) === false, 'GameDistribution: missing game id disables ads instead of crashing');
+            BUSINESS_CONFIG.gameDistributionId = '';
+
+            // Failure to load an SDK (ad blocker) must degrade to no-ads, never block play.
+            PortalLoader.load = async () => { throw new Error('blocked'); };
+            const g = freshGame();
+            await Monetization.init(g, { portal: 'poki', storage: new MemoryStorage() });
+            assert(Monetization.adapter.hasAds === false && Monetization.ready === false, 'Blocked SDK script falls back to the no-ads adapter');
+        } finally {
+            PortalLoader.load = realLoad;
+            delete window.CrazyGames; delete window.PokiSDK; delete window.gdsdk; delete window.GD_OPTIONS;
+            Monetization.adapter = new NoAdsAdapter();
+        }
+    });
+
+    await section('31. Legal Compliance Audit (claims vs. code)', () => {
+        const jsFiles = fs.readdirSync(path.join(ROOT, 'js')).filter(f => f.endsWith('.js'));
+        const src = Object.fromEntries(jsFiles.map(f => [f, read(`js/${f}`)]));
+        const netApis = /\bfetch\s*\(|XMLHttpRequest|sendBeacon|new\s+WebSocket|EventSource\s*\(|document\.cookie/;
+        const offenders = jsFiles.filter(f => netApis.test(src[f]));
+        assert(offenders.length === 0, `Privacy claim "no analytics/tracking": no network or cookie APIs in game code${offenders.length ? ' (found in ' + offenders.join(', ') + ')' : ''}`);
+        const remoteUrls = jsFiles.flatMap(f => (src[f].match(/https?:\/\/[^'"\s)]+/g) || []).map(u => [f, u]))
+            .filter(([f, u]) => !(f === 'monetization.js'));
+        assert(remoteUrls.length === 0, 'Only the portal adapter references remote URLs');
+        const sdkHosts = Object.values(PORTAL_SDK_URLS).map(u => new URL(u).hostname);
+        assert(sdkHosts.every(h => /(crazygames|poki|gamedistribution)\.com$/.test(h)), 'Third-party scripts are limited to the disclosed ad portals');
+        const usedKeys = new Set();
+        for (const f of jsFiles) for (const m of src[f].matchAll(/['"`](citadel\.[a-z0-9.]*)['"`]/gi)) usedKeys.add(m[1]);
+        const privacy = read('docs/PRIVACY.md');
+        const undisclosed = [...usedKeys].filter(k => !privacy.includes(k.replace(/\.$/, '')));
+        assert(usedKeys.size >= 5 && undisclosed.length === 0, `Every storage key used in code is disclosed in the Privacy Policy${undisclosed.length ? ': missing ' + undisclosed.join(', ') : ''}`);
+        assert(!/\bgoogleapis|google-analytics|gtag\(|facebook\.net|doubleclick/.test(Object.values(src).join('\n') + read('index.html')), 'No analytics or ad-tracking tags in the game shell');
+        assert(/serviceWorker/.test(privacy) || /service worker/i.test(privacy), 'Privacy Policy discloses the offline service worker cache');
+        assert(read('js/save_system.js').includes('MAX_IMPORT_BYTES') && /untrusted input/.test(privacy), 'Security claim (validated imports) matches implementation');
+
+        const legal = ['docs/PRIVACY.md', 'docs/TERMS.md', 'docs/EULA.md'];
+        const brokenLinks = [];
+        for (const f of legal) {
+            for (const m of read(f).matchAll(/\]\(([^)#\s]+)\)/g)) {
+                if (/^https?:/.test(m[1])) continue;
+                if (!exists(path.join(path.dirname(f), m[1]))) brokenLinks.push(`${f} -> ${m[1]}`);
+            }
+        }
+        assert(brokenLinks.length === 0, `Cross-references between legal documents resolve${brokenLinks.length ? ': ' + brokenLinks.join(', ') : ''}`);
+        const checklist = read('docs/LAUNCH_CHECKLIST.md');
+        const scanned = [...legal, 'marketing/index.html', 'marketing/presskit.html', 'desktop/package.json'];
+        const placeholders = new Set();
+        for (const f of scanned) for (const m of read(f).matchAll(/\[([A-Z][A-Z ,/&-]{3,})\]/g)) placeholders.add(m[1]);
+        assert(placeholders.size >= 8, `Placeholder scan is effective (${placeholders.size} distinct placeholders found)`);
+        const untracked = [...placeholders].filter(p => !checklist.includes(`[${p}]`));
+        assert(untracked.length === 0, `Every legal/marketing placeholder is tracked in the launch checklist${untracked.length ? ': ' + untracked.join(', ') : ''}`);
+        for (const f of legal) assert(/Effective date:\*\* 11 November 2026/.test(read(f)) && /Version:\*\* 1\.0/.test(read(f)), `${f} carries an effective date and version`);
+        assert(/16 or older/.test(read('marketing/index.html')) && /16 or older/.test(privacy), 'Newsletter age gate matches the Privacy Policy (16+)');
+        const eula = read('docs/EULA.md');
+        assert(/monetised content/i.test(eula) && /monetization/i.test(read('docs/GTM_STRATEGY.md')) && /EULA §4/.test(read('docs/GTM_STRATEGY.md')), 'Creator outreach promises match the EULA Content Creator Permission');
+    });
+
     console.log('\n===========================================');
     console.log(`TEST SUITE RESULTS: ${passedTests} PASSED, ${failedTests} FAILED`);
     console.log('===========================================\n');
