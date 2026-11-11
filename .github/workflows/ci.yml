@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Unit, integration & distribution tests
+        run: node tests/test_runner.js
+      - name: Build web release bundles
+        run: node scripts/build_web_release.js --out dist-ci
+      - name: Install Playwright (dev-only, not shipped)
+        run: |
+          npm install --no-save --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Browser end-to-end smoke test
+        run: node tests/e2e_smoke.js
+      - name: Upload release bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-release
+          path: dist-ci/
+          retention-days: 14
