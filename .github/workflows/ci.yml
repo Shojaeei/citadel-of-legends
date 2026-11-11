@@ -21,18 +21,30 @@ jobs:
         run: node tests/test_runner.js
       - name: Build web release bundles
         run: node scripts/build_web_release.js --out dist-ci
-      - name: Install Playwright (dev-only, not shipped)
-        run: |
-          npm install --no-save --no-audit --no-fund playwright@1.63.0
-          npx playwright install --with-deps chromium
-      - name: Browser end-to-end smoke test
-        run: node tests/e2e_smoke.js
       - name: Upload release bundles
         uses: actions/upload-artifact@v4
         with:
           name: web-release
           path: dist-ci/
           retention-days: 14
+
+  e2e:
+    # Browser end-to-end suite in Playwright's official image (Chromium and its
+    # system libraries preinstalled) - avoids slow apt installs on the runner.
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      HOME: /root
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Playwright client (dev-only, not shipped)
+        run: npm install --no-save --no-audit --no-fund playwright@1.63.0
+      - name: Browser end-to-end smoke test
+        run: node tests/e2e_smoke.js
 
   desktop-package:
     # Verifies the Electron edition packages on every OS (unsigned, unpacked;
