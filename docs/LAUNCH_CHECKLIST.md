@@ -4,13 +4,10 @@ Everything that could be built and verified in the repository is done. The items
 
 ## 1. Legal identity & documents (blocking)
 - [ ] Decide the legal entity (sole proprietor / LLC / Ltd). Replace **`[STUDIO LEGAL NAME]`**, **`[POSTAL ADDRESS]`**, **`[JURISDICTION]`**, **`[VENUE]`**, **`[PRIVACY CONTACT EMAIL]`**, **`[SUPPORT EMAIL]`**, **`[PRESS EMAIL]`** in:
-  `docs/PRIVACY.md`, `docs/TERMS.md`, `docs/EULA.md`, `marketing/index.html` (footer), `marketing/presskit.html`, `desktop/package.json` (`author`, `copyright`, `maintainer`).
+  `LICENSE`, `docs/PRIVACY.md`, `docs/TERMS.md`, `docs/EULA.md`, `marketing/index.html` (footer), `marketing/presskit.html`, `desktop/package.json` (`author`, `copyright`, `maintainer`).
 - [ ] Fill **`[EMAIL PROVIDER]`** and **`[HOSTING PROVIDER]`** in `docs/PRIVACY.md` §3.3–3.4.
 - [ ] Press kit & site identity: **`[STUDIO NAME]`**, **`[CITY, COUNTRY]`**, credits **`[NAME]`**, studio bio **`[ADD 1–2 SENTENCES ABOUT THE TEAM.]`** in `marketing/presskit.html`; EU/UK **`[REPRESENTATIVE DETAILS]`** in `docs/PRIVACY.md` §9 (only if you have no EU/UK establishment and Art. 27 applies).
-- [ ] **Source-code licence decision.** The repository is public but has no `LICENSE` file, which means "all rights reserved" by default. Options:
-  1. *Keep proprietary* (recommended for a commercial launch): add a `LICENSE` stating all rights reserved; the EULA governs builds.
-  2. *Open source (MIT)*: add `LICENSE` (MIT) for code; keep the EULA for builds/artwork/trademarks; remove the "Open-source decision pending" notice in `docs/EULA.md`.
-  3. *Source-available* (e.g. PolyForm Noncommercial).
+- [x] **Source-code licence decision:** proprietary, all rights reserved (root `LICENSE`, decided 2026-11-11). Fill `[STUDIO LEGAL NAME]` and `[SUPPORT EMAIL]` in `LICENSE` too.
 - [ ] Have counsel review the three legal documents (they are templates, not legal advice).
 - [ ] Optional: register "Citadel of Legends" as a trademark in your primary market before heavy marketing spend.
 

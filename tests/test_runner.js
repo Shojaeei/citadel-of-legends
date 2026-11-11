@@ -1042,6 +1042,8 @@ async function runTests() {
         assert(/Acceptable use/i.test(terms) && /Limitation of liability/i.test(terms) && /Governing law/i.test(terms), 'Terms of Service cover use, liability and governing law');
         const eula = read('docs/EULA.md');
         assert(/License grant/i.test(eula) && /Content Creator Permission/.test(eula) && /Open Font License/.test(eula), 'EULA grants a licence, permits creators and credits OFL fonts');
+        assert(exists('LICENSE') && /All rights reserved/.test(read('LICENSE')) && /OFL-Cinzel\.txt/.test(read('LICENSE')), 'Proprietary LICENSE present and carves out third-party font licences');
+        assert(JSON.parse(read('package.json')).license === 'SEE LICENSE IN LICENSE' && !/decision pending/i.test(eula), 'package.json and EULA point to the decided licence');
         const html = read('index.html');
         assert(/id="consent-banner"/.test(html) && /docs\/PRIVACY\.md/.test(html) && /docs\/TERMS\.md/.test(html), 'In-game consent banner and legal links are present');
     });

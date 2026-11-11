@@ -6,30 +6,30 @@
     {
       "file": "citadel_of_legends_v1.0_web.zip",
       "target": "itch.io / self-hosted PWA",
-      "files": 35,
-      "bytes": 364904,
-      "sha256": "4c6f84155938d5b3c91b25da2175d827e410c31a7c9db7fc06c5538a5b93349b"
+      "files": 36,
+      "bytes": 366141,
+      "sha256": "2d1062d0734af5be5c8201cacce3afa20e904cc9f8868c616e6ef68beb38c2f8"
     },
     {
       "file": "citadel_of_legends_v1.0_crazygames.zip",
       "target": "CrazyGames (SDK v3)",
-      "files": 35,
-      "bytes": 364952,
-      "sha256": "ea8534d26afd03ec595a8c4ad999a956af56d462de2c38ce55ff12d090915dc9"
+      "files": 36,
+      "bytes": 366189,
+      "sha256": "8a3b138f84023908e18d2bd2d42695d7fc7daf11ea7f8357b2afe172e85f946e"
     },
     {
       "file": "citadel_of_legends_v1.0_poki.zip",
       "target": "Poki (SDK v2)",
-      "files": 35,
-      "bytes": 364948,
-      "sha256": "8e5b1be5793051f2f47314785d7e389a90e86120e1be9a85f25d794fb11d3a2f"
+      "files": 36,
+      "bytes": 366185,
+      "sha256": "bbcc985f2870996b4695315036af74cb1bdfb4bc54254f90485466072773ddc5"
     },
     {
       "file": "citadel_of_legends_v1.0_website.zip",
       "target": "Marketing website + /play",
-      "files": 56,
-      "bytes": 3733125,
-      "sha256": "3852ad2b1a149d856b5d8e8d944029739c298a18dfdbbdb2024799006cac85f3"
+      "files": 58,
+      "bytes": 3735524,
+      "sha256": "c3b21bb1a45580f330f3b793be10d10f40daeb7af60419f21d01f2b3c6cd146c"
     }
   ]
 }

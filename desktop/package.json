@@ -6,7 +6,7 @@
   "main": "main.js",
   "private": true,
   "author": "[STUDIO LEGAL NAME]",
-  "license": "SEE LICENSE IN ../docs/EULA.md",
+  "license": "SEE LICENSE IN LICENSE",
   "scripts": {
     "stage": "node scripts/stage.js",
     "start": "npm run stage && electron .",

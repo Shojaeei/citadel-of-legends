@@ -106,4 +106,4 @@ docs/                      Architecture, gameplay, devlog, plans, GTM, legal, la
 * [Landing page](marketing/index.html) · [Press kit](marketing/presskit.html)
 
 ---
-*Citadel of Legends: Shattered Realms © 2026. Fonts: Cinzel & MedievalSharp, SIL Open Font License 1.1.*
+*Citadel of Legends: Shattered Realms © 2026. All rights reserved — see [`LICENSE`](LICENSE). Fonts: Cinzel & MedievalSharp, SIL Open Font License 1.1.*
