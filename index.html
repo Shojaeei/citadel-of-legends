@@ -2,11 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Citadel of Legends: Shattered Realms</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Custom Stylesheet -->
+    <meta name="description" content="Build a medieval citadel, feed your people and survive dragon-backed sieges. A free tactical castle-builder RTS that runs in your browser - no install, works offline.">
+    <meta name="theme-color" content="#0c0a09">
+    <meta name="application-name" content="Citadel of Legends">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta property="og:title" content="Citadel of Legends: Shattered Realms">
+    <meta property="og:description" content="Tactical castle-builder RTS with three asymmetric factions, a 9-mission campaign and real-time siege warfare. Play free in your browser.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="marketing/assets/og-image.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <!-- Precompiled Tailwind utilities (no runtime CDN; see scripts/build_css.sh) -->
+    <link rel="stylesheet" href="css/tailwind.css">
+    <!-- Custom Stylesheet (self-hosted OFL fonts, parchment theme) -->
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="h-screen w-screen flex flex-col justify-between overflow-hidden bg-stone-950 text-stone-100">
@@ -28,6 +41,14 @@
                 <p class="text-amber-200/80 text-base md:text-lg tracking-widest uppercase mb-6 font-semibold">
                     Shattered Realms &bull; Castle Builder & Warfare
                 </p>
+
+                <!-- CONTINUE FROM AUTO-SAVE -->
+                <div id="continue-btn" class="mb-3 w-full max-w-md hidden">
+                    <button onclick="GameApp.continueFromAutosave()" class="parchment-button py-2.5 px-6 rounded-xl font-bold w-full flex flex-col items-center !bg-emerald-950 !border-emerald-500">
+                        <span>&#9654; Continue</span>
+                        <span id="continue-label" class="text-[11px] text-emerald-200/80 font-normal"></span>
+                    </button>
+                </div>
 
                 <!-- PROMINENT QUICK LAUNCH BUTTON -->
                 <div class="mb-6 w-full max-w-md">
@@ -56,9 +77,21 @@
                     </button>
                 </div>
 
+                <div class="flex flex-wrap justify-center gap-3 mb-6">
+                    <button onclick="GameApp.openSaveMenu()" class="parchment-button px-4 py-2 rounded-lg text-sm font-bold">&#128190; Load Game</button>
+                    <button onclick="GameApp.openSettings()" class="parchment-button px-4 py-2 rounded-lg text-sm font-bold">&#9881; Settings</button>
+                    <button onclick="GameApp.openSupporter()" class="parchment-button px-4 py-2 rounded-lg text-sm font-bold !bg-yellow-900 !border-yellow-500">&#128081; Royal Supporter</button>
+                </div>
+
                 <div class="text-xs text-stone-500 space-y-1">
-                    <div>Zero Dependencies &bull; HTML5 2.5D Canvas &bull; Web Audio Synthesizer</div>
-                    <div class="text-stone-600">Controls: Left-Click to Build/Select &bull; Right-Click to Cancel/Move &bull; Mouse Drag or WASD to Pan</div>
+                    <div>Zero Dependencies &bull; HTML5 2.5D Canvas &bull; Web Audio Synthesizer &bull; Works Offline</div>
+                    <div class="text-stone-600">Controls: Left-Click to Build/Select &bull; Right-Click to Cancel/Move &bull; Drag or WASD to Pan &bull; Shift+Drag to Box-Select</div>
+                    <div class="text-stone-600">
+                        <a href="docs/PRIVACY.md" target="_blank" rel="noopener" class="underline hover:text-amber-300">Privacy</a> &bull;
+                        <a href="docs/TERMS.md" target="_blank" rel="noopener" class="underline hover:text-amber-300">Terms</a> &bull;
+                        <a href="docs/EULA.md" target="_blank" rel="noopener" class="underline hover:text-amber-300">EULA</a> &bull;
+                        <span>v<span id="game-version">1.0.0</span></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -67,7 +100,7 @@
         <div id="campaign-modal" class="absolute inset-0 z-50 bg-stone-950/95 flex flex-col items-center justify-center p-4 hidden">
             <div class="max-w-4xl w-full parchment-panel p-6 rounded-xl flex flex-col max-h-[92vh]">
                 <div class="flex justify-between items-center mb-4 border-b border-stone-700 pb-3">
-                    <h2 class="medieval-font text-2xl md:text-3xl font-bold text-amber-400">Campaign Sagas</h2>
+                    <div><h2 class="medieval-font text-2xl md:text-3xl font-bold text-amber-400">Campaign Sagas</h2><p class="text-[11px] text-stone-400">Complete a mission to unlock the next. &#9733; marks a bonus objective achieved.</p></div>
                     <button onclick="GameApp.hideModals()" class="text-stone-400 hover:text-white font-bold text-2xl cursor-pointer p-1">&times;</button>
                 </div>
                 
@@ -83,13 +116,9 @@
                             <p class="text-xs text-stone-300 mb-3 leading-snug">
                                 Plentiful bakeries, high stone keeps, Sun-Blade Knights, and the solar dragon.
                             </p>
-                            <div class="text-[11px] space-y-1 text-stone-400 mb-4 bg-stone-950/60 p-2.5 rounded border border-stone-800">
-                                <div>&bull; Mission 1: The Saxon Incursion</div>
-                                <div>&bull; Mission 2: Camelot's Gate</div>
-                                <div>&bull; Mission 3: Shadow Over Avalon</div>
-                            </div>
+                            <div id="campaign-list-solaris" class="mb-1" aria-label="solaris missions"></div>
                         </div>
-                        <button onclick="GameApp.startCampaign('solaris', 1)" class="parchment-button py-2.5 px-3 rounded font-bold text-sm w-full cursor-pointer hover:!border-amber-400">Play Solaris Saga</button>
+                        
                     </div>
 
                     <!-- Frostbound Covenant -->
@@ -103,13 +132,9 @@
                             <p class="text-xs text-stone-300 mb-3 leading-snug">
                                 Basalt quarries, hunter camps, mountain Frost Giants, and Ice Wyverns.
                             </p>
-                            <div class="text-[11px] space-y-1 text-stone-400 mb-4 bg-stone-950/60 p-2.5 rounded border border-stone-800">
-                                <div>&bull; Mission 1: Evil on Glacier</div>
-                                <div>&bull; Mission 2: Frostpeak Pass</div>
-                                <div>&bull; Mission 3: The Ice Wyvern</div>
-                            </div>
+                            <div id="campaign-list-frost" class="mb-1" aria-label="frost missions"></div>
                         </div>
-                        <button onclick="GameApp.startCampaign('frost', 1)" class="parchment-button py-2.5 px-3 rounded font-bold text-sm w-full !bg-sky-950 !border-sky-500 hover:!bg-sky-900 cursor-pointer">Play Frost Saga</button>
+                        
                     </div>
 
                     <!-- Obsidian Scourge -->
@@ -123,13 +148,9 @@
                             <p class="text-xs text-stone-300 mb-3 leading-snug">
                                 Boiling tar defenses, Werewolves, siege catapults, and the Abyss Dragon.
                             </p>
-                            <div class="text-[11px] space-y-1 text-stone-400 mb-4 bg-stone-950/60 p-2.5 rounded border border-stone-800">
-                                <div>&bull; Mission 1: Transylvanian Night</div>
-                                <div>&bull; Mission 2: Blood Crucible</div>
-                                <div>&bull; Mission 3: Eclipse of Abyss</div>
-                            </div>
+                            <div id="campaign-list-obsidian" class="mb-1" aria-label="obsidian missions"></div>
                         </div>
-                        <button onclick="GameApp.startCampaign('obsidian', 1)" class="parchment-button py-2.5 px-3 rounded font-bold text-sm w-full !bg-red-950 !border-red-600 hover:!bg-red-900 cursor-pointer">Play Obsidian Saga</button>
+                        
                     </div>
                 </div>
             </div>
@@ -170,6 +191,11 @@
                             <option value="hard">Hard (Aggressive Warmonger)</option>
                         </select>
                     </div>
+
+                    <label class="flex items-center gap-2 text-sm text-amber-200">
+                        <input id="skirmish-fog" type="checkbox" checked class="w-4 h-4 accent-amber-500">
+                        Fog of War &amp; exploration shroud
+                    </label>
                 </div>
 
                 <div class="flex space-x-4">
@@ -222,13 +248,20 @@
 
                 <!-- Mission, Wave & Menu Controls -->
                 <div class="flex items-center space-x-2 md:space-x-3">
-                    <div id="wave-countdown" class="resource-badge !border-red-600/70 text-red-300 font-bold hidden md:inline-flex" title="Next Enemy Siege Wave">
+                    <div id="wave-countdown" class="resource-badge !border-red-600/70 text-red-300 font-bold hidden md:inline-flex whitespace-nowrap shrink-0" title="Next Enemy Siege Wave">
                         Wave 1 in: 60s
                     </div>
+                    <div class="flex items-center rounded overflow-hidden border border-stone-700 shrink-0" role="group" aria-label="Game speed">
+                        <button id="speed-btn-0" onclick="GameApp.setSpeed(0)" class="parchment-button px-1.5 py-1 text-[11px] font-bold" title="Pause (P)" aria-label="Pause">&#10074;&#10074;</button>
+                        <button id="speed-btn-1" onclick="GameApp.setSpeed(1)" class="parchment-button active px-1.5 py-1 text-[11px] font-bold" title="Normal speed" aria-label="Speed 1x">1x</button>
+                        <button id="speed-btn-2" onclick="GameApp.setSpeed(2)" class="parchment-button px-1.5 py-1 text-[11px] font-bold" title="Fast" aria-label="Speed 2x">2x</button>
+                        <button id="speed-btn-5" onclick="GameApp.setSpeed(5)" class="parchment-button px-1.5 py-1 text-[11px] font-bold" title="Ultra" aria-label="Speed 5x">5x</button>
+                    </div>
+                    <button id="respite-btn" onclick="GameApp.requestRoyalRespite()" class="parchment-button !bg-emerald-950 !border-emerald-600 px-2 py-1 rounded text-xs font-bold hidden" title="Optional: watch a short ad for +150 emergency stone">Royal Respite +150 Stone</button>
                     <button onclick="GameApp.triggerEnemyWave()" class="parchment-button !bg-red-950 !border-red-600 px-2 py-1 rounded text-xs font-bold" title="Call invasion wave immediately">⚔️ Rush Wave</button>
                     <button onclick="GameApp.selectAllMilitary()" class="parchment-button !bg-amber-950 !border-amber-600 px-2 py-1 rounded text-xs font-bold" title="Select all active military units (or Shift+Drag on canvas)">⚔️ Army</button>
                     <button onclick="GameApp.triggerBoilingPitch()" class="parchment-button !bg-orange-950 !border-orange-600 px-2 py-1 rounded text-xs font-bold" title="Defend walls: Pour boiling pitch on nearby foes (Cost: 5 Pitch)">🔥 Pitch</button>
-                    <div id="mission-objective-banner" class="hidden md:flex items-center bg-stone-900/90 border border-amber-600/50 px-3 py-1 rounded text-amber-200 text-xs shadow-md">
+                    <div id="mission-objective-banner" class="hidden xl:flex items-center bg-stone-900/90 border border-amber-600/50 px-3 py-1 rounded text-amber-200 text-xs shadow-md max-w-md">
                         <span class="font-bold mr-1.5 text-amber-400">Objective:</span>
                         <span id="objective-text">Build Keep & Stockpile</span>
                     </div>
@@ -236,6 +269,9 @@
                         <span>📜 Dev Chat</span>
                     </button>
                     <button onclick="GameApp.centerOnKeep()" class="parchment-button px-2.5 py-1.5 rounded text-xs font-bold" title="Center camera on Keep (Space)">Keep</button>
+                    <button onclick="GameApp.openSaveMenu()" class="parchment-button px-2.5 py-1.5 rounded text-xs font-bold" title="Save / Load (K quick-save, L quick-load)" aria-label="Save or load game">&#128190;</button>
+                    <button onclick="GameApp.openSettings()" class="parchment-button px-2.5 py-1.5 rounded text-xs font-bold" title="Settings" aria-label="Settings">&#9881;</button>
+                    <span id="supporter-badge" class="hidden text-yellow-300 text-sm" title="Royal Supporter">&#128081;</span>
                     <button onclick="GameApp.returnToMenu()" class="parchment-button bg-stone-800 hover:bg-stone-700 text-amber-200 px-3 py-1.5 rounded font-bold border border-stone-600">Menu</button>
                 </div>
             </div>
@@ -249,6 +285,25 @@
                     <div id="inspector-title" class="font-bold text-amber-400 text-base mb-1">Building Title</div>
                     <div id="inspector-desc" class="text-xs text-stone-300 mb-2 leading-relaxed">Description and stats go here.</div>
                     <div id="inspector-stats" class="text-xs text-amber-200/90 space-y-1 border-t border-stone-700 pt-2"></div>
+                </div>
+
+                <!-- Objective Tracker -->
+                <div id="objective-tracker" class="absolute top-4 right-4 floating-card parchment-panel p-3 rounded-lg w-64 max-w-[45vw] z-20 text-[11px] space-y-0.5 pointer-events-none" aria-live="polite"></div>
+
+                <!-- Pause indicator -->
+                <div id="pause-indicator" class="hidden absolute top-16 left-1/2 -translate-x-1/2 z-20 medieval-font text-3xl text-amber-300 drop-shadow-[0_3px_6px_rgba(0,0,0,0.9)] pointer-events-none">PAUSED</div>
+
+                <!-- Royal Supporter developer commentary -->
+                <div id="dev-commentary" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 z-20 floating-card parchment-panel px-4 py-2 rounded-lg text-xs text-yellow-200 max-w-md text-center pointer-events-none"></div>
+
+                <!-- Radar Minimap -->
+                <div id="minimap-wrap" class="absolute bottom-3 right-3 z-20 parchment-panel rounded-lg p-1.5 shadow-2xl">
+                    <canvas id="minimap-canvas" width="180" height="180" class="block w-[132px] h-[132px] md:w-[180px] md:h-[180px] cursor-pointer rounded" role="img" aria-label="Radar minimap: click or drag to move the camera"></canvas>
+                </div>
+
+                <!-- Touch virtual joystick (coarse-pointer devices only) -->
+                <div id="touch-joystick" class="hidden absolute bottom-6 left-6 z-20 w-24 h-24 rounded-full bg-stone-900/60 border-2 border-amber-600/60 flex items-center justify-center" aria-hidden="true">
+                    <div id="touch-joystick-knob" class="w-10 h-10 rounded-full bg-amber-600/80 border border-amber-300 transition-transform duration-75"></div>
                 </div>
 
                 <!-- Floating Notification Toast -->
@@ -339,12 +394,12 @@
         <div id="victory-modal" class="absolute inset-0 z-50 bg-stone-950/95 flex flex-col items-center justify-center p-6 hidden">
             <div class="max-w-md w-full parchment-panel p-8 rounded-xl flex flex-col items-center text-center shadow-2xl border-2 border-amber-500">
                 <div class="text-5xl mb-3">&#127942;</div>
-                <h2 class="medieval-font text-3xl font-bold text-amber-400 mb-2">VICTORY ACHIEVED!</h2>
+                <h2 id="victory-title" class="medieval-font text-3xl font-bold text-amber-400 mb-2">VICTORY ACHIEVED!</h2>
                 <p class="text-sm text-amber-200/80 mb-6">The rival fortress has fallen! Your banner flies triumphant over the Shattered Realms.</p>
                 <div id="victory-stats" class="bg-stone-900 border border-stone-800 p-4 rounded-lg w-full text-xs text-stone-300 space-y-1 mb-6 text-left"></div>
                 <div class="flex space-x-3 w-full">
                     <button onclick="GameApp.returnToMenu()" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1 bg-stone-800">Main Menu</button>
-                    <button onclick="GameApp.advanceNextMission()" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1 !bg-amber-600 hover:!bg-amber-500">Next Campaign</button>
+                    <button id="victory-next-btn" onclick="GameApp.victoryContinue()" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1 !bg-amber-600 hover:!bg-amber-500">Next Mission</button>
                 </div>
             </div>
         </div>
@@ -357,7 +412,102 @@
                 <p class="text-sm text-stone-300 mb-6">Sire, our Keep has fallen to the enemy siege. Our realm lies in ruins!</p>
                 <div class="flex space-x-3 w-full">
                     <button onclick="GameApp.returnToMenu()" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1 bg-stone-800">Return to Menu</button>
-                    <button onclick="GameApp.launchSkirmish()" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1 !bg-red-800 hover:!bg-red-700">Try Again</button>
+                    <button onclick="GameApp.loadFromSlot('auto')" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1">Load Auto-save</button>
+                    <button onclick="GameApp.retryCurrent()" class="parchment-button py-2.5 px-4 rounded font-bold text-xs flex-1 !bg-red-800 hover:!bg-red-700">Try Again</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MISSION BRIEFING MODAL -->
+        <div id="briefing-modal" class="absolute inset-0 z-50 bg-stone-950/90 flex flex-col items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="briefing-title">
+            <div class="max-w-lg w-full parchment-panel p-6 rounded-xl shadow-2xl border-2 border-amber-600">
+                <div id="briefing-faction" class="text-xs uppercase tracking-widest text-amber-300/80 mb-1"></div>
+                <h2 id="briefing-title" class="medieval-font text-3xl font-bold text-amber-400 mb-3"></h2>
+                <p id="briefing-text" class="text-sm text-stone-200 leading-relaxed mb-4"></p>
+                <div class="text-xs font-bold text-amber-200 mb-1.5 uppercase tracking-wider">Objectives</div>
+                <ul id="briefing-objectives" class="text-sm text-stone-200 space-y-1 mb-3"></ul>
+                <p id="briefing-intel" class="text-xs text-red-300/90 italic mb-5"></p>
+                <button onclick="GameApp.beginMission()" class="parchment-button py-3 px-6 rounded-lg font-bold w-full !bg-amber-600 hover:!bg-amber-500 uppercase tracking-wide">&#9876; Begin Mission</button>
+            </div>
+        </div>
+
+        <!-- SAVE / LOAD MODAL -->
+        <div id="save-modal" class="absolute inset-0 z-50 bg-stone-950/90 flex flex-col items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="save-title">
+            <div class="max-w-lg w-full parchment-panel p-6 rounded-xl shadow-2xl">
+                <div class="flex justify-between items-center mb-4 border-b border-stone-700 pb-3">
+                    <h3 id="save-title" class="medieval-font text-2xl font-bold text-amber-400">Royal Archives</h3>
+                    <button onclick="GameApp.hideModals()" class="text-stone-400 hover:text-white font-bold text-xl" aria-label="Close">&times;</button>
+                </div>
+                <div id="save-slot-list" class="space-y-2 mb-4"></div>
+                <p class="text-[11px] text-stone-400 mb-3">Auto-save runs every 3 minutes and after each repelled siege wave. Saves stay on this device only.</p>
+                <div class="flex gap-2">
+                    <button id="export-save-btn" onclick="GameApp.exportSave()" class="parchment-button py-2 px-3 rounded font-bold text-xs flex-1">&#11015; Export .citadelsave</button>
+                    <label class="parchment-button py-2 px-3 rounded font-bold text-xs flex-1 text-center cursor-pointer">&#11014; Import save
+                        <input type="file" accept=".citadelsave,.json,application/json" class="hidden" onchange="GameApp.importSave(this)">
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS MODAL -->
+        <div id="settings-modal" class="absolute inset-0 z-50 bg-stone-950/90 flex flex-col items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+            <div class="max-w-lg w-full parchment-panel p-6 rounded-xl shadow-2xl max-h-[92vh] flex flex-col">
+                <div class="flex justify-between items-center mb-4 border-b border-stone-700 pb-3">
+                    <h3 id="settings-title" class="medieval-font text-2xl font-bold text-amber-400">Settings</h3>
+                    <button onclick="GameApp.hideModals()" class="text-stone-400 hover:text-white font-bold text-xl" aria-label="Close">&times;</button>
+                </div>
+                <div class="overflow-y-auto pr-1 space-y-4">
+                    <section>
+                        <div class="text-xs font-bold text-amber-200 mb-2 uppercase tracking-wider">Audio Mixer</div>
+                        <label class="flex items-center gap-3 text-xs mb-2"><span class="w-24">Master</span><input id="vol-master" type="range" min="0" max="100" class="flex-1 accent-amber-500" oninput="GameApp.setVolume('master', this.value)"><span id="vol-master-label" class="w-10 text-right">80%</span></label>
+                        <label class="flex items-center gap-3 text-xs mb-2"><span class="w-24">Effects</span><input id="vol-sfx" type="range" min="0" max="100" class="flex-1 accent-amber-500" oninput="GameApp.setVolume('sfx', this.value)"><span id="vol-sfx-label" class="w-10 text-right">90%</span></label>
+                        <label class="flex items-center gap-3 text-xs"><span class="w-24">Music &amp; Ambience</span><input id="vol-music" type="range" min="0" max="100" class="flex-1 accent-amber-500" oninput="GameApp.setVolume('music', this.value)"><span id="vol-music-label" class="w-10 text-right">60%</span></label>
+                    </section>
+                    <section>
+                        <div class="text-xs font-bold text-amber-200 mb-2 uppercase tracking-wider">Accessibility &amp; Display</div>
+                        <label class="flex items-center gap-2 text-xs mb-1.5"><input id="set-highContrast" type="checkbox" class="w-4 h-4 accent-amber-500" onchange="GameApp.setSettingFlag('highContrast', this.checked)"> High-contrast entity outlines</label>
+                        <label class="flex items-center gap-2 text-xs mb-1.5"><input id="set-weather" type="checkbox" class="w-4 h-4 accent-amber-500" onchange="GameApp.setSettingFlag('weather', this.checked)"> Weather particles</label>
+                        <label class="flex items-center gap-2 text-xs mb-1.5"><input id="set-reducedMotion" type="checkbox" class="w-4 h-4 accent-amber-500" onchange="GameApp.setSettingFlag('reducedMotion', this.checked)"> Reduced motion</label>
+                        <label class="flex items-center gap-2 text-xs"><input id="set-showMinimap" type="checkbox" class="w-4 h-4 accent-amber-500" onchange="GameApp.setSettingFlag('showMinimap', this.checked)"> Show radar minimap</label>
+                    </section>
+                    <section>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-xs font-bold text-amber-200 uppercase tracking-wider">Key Bindings</div>
+                            <button onclick="GameApp.resetKeybinds()" class="parchment-button px-2 py-0.5 rounded text-[11px]">Reset</button>
+                        </div>
+                        <p class="text-[10px] text-stone-400 mb-1">Click a binding, then press the new key (Esc cancels). Arrow keys always pan.</p>
+                        <div id="keybind-list"></div>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROYAL SUPPORTER MODAL -->
+        <div id="supporter-modal" class="absolute inset-0 z-50 bg-stone-950/90 flex flex-col items-center justify-center p-4 hidden" role="dialog" aria-modal="true" aria-labelledby="supporter-title">
+            <div class="max-w-md w-full parchment-panel p-6 rounded-xl shadow-2xl border-2 border-yellow-600 text-center">
+                <div class="text-4xl mb-2">&#128081;</div>
+                <h3 id="supporter-title" class="medieval-font text-2xl font-bold text-yellow-300 mb-2">Royal Supporter Edition</h3>
+                <p class="text-sm text-stone-200 mb-3">Citadel of Legends is free. If you enjoy it, a one-time tip keeps an independent studio building. Supporters unlock <b class="text-yellow-200">golden citadel banners</b>, <b class="text-yellow-200">developer commentary mode</b> and an <b class="text-yellow-200">ad-free</b> experience on portals.</p>
+                <button onclick="Monetization.openSupporterPage()" class="parchment-button py-2.5 px-4 rounded font-bold w-full mb-4 !bg-yellow-700 !border-yellow-400">Become a Royal Supporter</button>
+                <label for="supporter-code" class="block text-xs text-stone-300 mb-1 text-left">Already a supporter? Enter your code:</label>
+                <div class="flex gap-2">
+                    <input id="supporter-code" type="text" maxlength="40" autocomplete="off" spellcheck="false" placeholder="AVALON-XXXX-XXXX" class="flex-1 bg-stone-950 border border-stone-700 rounded px-2 py-1.5 text-sm text-stone-100 uppercase outline-none focus:border-yellow-500">
+                    <button onclick="GameApp.redeemSupporterCode()" class="parchment-button px-3 py-1.5 rounded text-xs font-bold">Redeem</button>
+                </div>
+                <p id="supporter-status" class="text-xs text-yellow-200 mt-2 min-h-[1rem]" aria-live="polite"></p>
+                <button onclick="GameApp.hideModals()" class="mt-3 text-xs text-stone-400 underline">Close</button>
+            </div>
+        </div>
+
+        <!-- PRIVACY / CONSENT BANNER -->
+        <div id="consent-banner" class="hidden fixed bottom-0 inset-x-0 z-[60] bg-stone-950/95 border-t-2 border-amber-700 p-3 md:p-4" role="dialog" aria-live="polite" aria-label="Privacy notice">
+            <div class="max-w-4xl mx-auto flex flex-col md:flex-row items-start md:items-center gap-3 text-xs text-stone-200">
+                <p class="flex-1 leading-relaxed">
+                    &#127984; We store your saves and settings <b>only on this device</b> (browser storage). We run no analytics or tracking. When you play on an ad-supported web portal, that portal and its ad partners may process data under their own policies. <a href="docs/PRIVACY.md" target="_blank" rel="noopener" class="underline text-amber-300">Privacy Policy</a>
+                </p>
+                <div class="flex gap-2 shrink-0">
+                    <button onclick="GameApp.setConsent('essential')" class="parchment-button px-3 py-1.5 rounded font-bold">Essential only</button>
+                    <button onclick="GameApp.setConsent('accept')" class="parchment-button px-3 py-1.5 rounded font-bold !bg-amber-600">Accept</button>
                 </div>
             </div>
         </div>
@@ -366,10 +516,19 @@
 
     <!-- GAME SCRIPTS LOADED IN DEPENDENCY ORDER -->
     <script src="js/config.js"></script>
+    <script src="js/spatial.js"></script>
+    <script src="js/settings.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/economy.js"></script>
     <script src="js/pathfinding.js"></script>
     <script src="js/entities.js"></script>
+    <script src="js/fog.js"></script>
+    <script src="js/fx.js"></script>
+    <script src="js/campaign.js"></script>
+    <script src="js/save_system.js"></script>
+    <script src="js/minimap.js"></script>
+    <script src="js/touch.js"></script>
+    <script src="js/monetization.js"></script>
     <script src="js/renderer.js"></script>
     <script src="js/devconsole.js"></script>
     <script src="js/game.js"></script>
