@@ -1,0 +1,17 @@
+# Citadel Buildings MTL
+newmtl stone
+Kd 0.56 0.55 0.52
+newmtl timber
+Kd 0.34 0.21 0.12
+newmtl slate
+Kd 0.22 0.26 0.34
+newmtl thatch
+Kd 0.68 0.54 0.26
+newmtl gold
+Kd 0.85 0.68 0.22
+newmtl basalt
+Kd 0.19 0.21 0.25
+newmtl ice
+Kd 0.45 0.78 0.96
+newmtl crimson
+Kd 0.65 0.12 0.16
