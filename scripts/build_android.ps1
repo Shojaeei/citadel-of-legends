@@ -1,8 +1,9 @@
-# Build & Deploy Citadel of Legends (UE 5.8) for Android
+# Build & Deploy Citadel of Legends (UE 5.8) for Android (supports both x86_64 emulator & arm64 phones)
 param(
   [string]$ProjectPath = "D:\UnrealProjects\Xenon\Xenon.uproject",
   [ValidateSet("Development","Shipping")][string]$Config = "Development",
   [ValidateSet("ASTC","Multi","ETC2")][string]$CookFlavor = "ASTC",
+  [string]$DeviceId = "",
   [switch]$AppBundle,
   [switch]$Deploy
 )
@@ -10,8 +11,23 @@ param(
 $ErrorActionPreference = "Stop"
 $EngineRoot = "C:\Program Files\Epic Games\UE_5.8"
 $RunUAT = Join-Path $EngineRoot "Engine\Build\BatchFiles\RunUAT.bat"
-$Adb = Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe"
+$SdkRoot = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { Join-Path $env:LOCALAPPDATA "Android\Sdk" }
+$Adb = Join-Path $SdkRoot "platform-tools\adb.exe"
 $OutDir = "D:\UnrealProjects\Xenon\Builds\Android"
+
+# Ensure Android SDK / NDK / JDK env vars are exported for UBT/UAT
+$env:ANDROID_HOME = $SdkRoot
+if (-not $env:NDKROOT -or !(Test-Path $env:NDKROOT)) {
+  $ndkDir = Get-ChildItem (Join-Path $SdkRoot "ndk") -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
+  if ($ndkDir) { $env:NDKROOT = $ndkDir.FullName }
+}
+if (-not $env:JAVA_HOME -or !(Test-Path $env:JAVA_HOME)) {
+  $jdk = Get-ChildItem "C:\Program Files\Microsoft\jdk-17*" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($jdk) { $env:JAVA_HOME = $jdk.FullName }
+}
+Write-Host "ANDROID_HOME=$env:ANDROID_HOME" -ForegroundColor DarkGray
+Write-Host "NDKROOT=$env:NDKROOT" -ForegroundColor DarkGray
+Write-Host "JAVA_HOME=$env:JAVA_HOME" -ForegroundColor DarkGray
 
 if (!(Test-Path $ProjectPath)) {
   throw "Project not found at $ProjectPath"
@@ -53,18 +69,41 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 if ($Deploy) {
   if (!(Test-Path $Adb)) { throw "adb not found at $Adb" }
-  $devs = & $Adb devices | Select-String "\tdevice$"
-  if (!$devs) {
-    Write-Host "No Android device connected over USB. Enable Developer Options + USB Debugging on your phone." -ForegroundColor Yellow
+  $devLines = & $Adb devices | Select-String "\tdevice$"
+  if (!$devLines) {
+    Write-Host "No Android device or emulator connected. Boot an emulator or enable USB Debugging." -ForegroundColor Yellow
     exit 3
   }
-  $installer = Get-ChildItem $OutDir -Recurse -Filter "Install_*arm64*.bat" | Select-Object -First 1
-  if ($installer) {
-    Write-Host "Installing via $($installer.FullName)..."
-    & cmd /c "`"$($installer.FullName)`""
-  } else {
+  if (-not $DeviceId) {
+    $DeviceId = ($devLines[0].Line -split "\s+")[0]
+  }
+  $abi = (& $Adb -s $DeviceId shell getprop ro.product.cpu.abi).Trim()
+  Write-Host "Deploying to $DeviceId (ABI: $abi)..." -ForegroundColor Cyan
+
+  $pattern = if ($abi -match "x86_64") { "*x64*" } else { "*arm64*" }
+  $installer = Get-ChildItem $OutDir -Recurse -Filter "Install_*$pattern*.bat" | Select-Object -First 1
+  if (-not $installer) {
+    $installer = Get-ChildItem $OutDir -Recurse -Filter "Install_*.bat" | Select-Object -First 1
+  }
+
+  $apk = Get-ChildItem $OutDir -Recurse -Filter "*$pattern*.apk" | Select-Object -First 1
+  if (-not $apk) {
     $apk = Get-ChildItem $OutDir -Recurse -Filter "*.apk" | Select-Object -First 1
-    if (!$apk) { throw "No APK found in $OutDir" }
-    & $Adb install -r $apk.FullName
+  }
+  if (-not $apk) { throw "No APK found in $OutDir" }
+
+  Write-Host "Installing APK: $($apk.FullName)" -ForegroundColor Green
+  & $Adb -s $DeviceId install -r -g $apk.FullName
+  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  # Push OBB if generated (non-bundled builds)
+  $obb = Get-ChildItem $OutDir -Recurse -Filter "*.obb" | Select-Object -First 1
+  if ($obb) {
+    Write-Host "Also found OBB ($($obb.Name)); running UE installer script if available..."
+    if ($installer) {
+      $env:ANDROID_SERIAL = $DeviceId
+      Push-Location $installer.DirectoryName
+      try { & cmd /c "`"$($installer.Name)`"" } finally { Pop-Location }
+    }
   }
 }
