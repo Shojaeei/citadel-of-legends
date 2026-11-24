@@ -4,6 +4,7 @@ param(
   [ValidateSet("Development","Shipping")][string]$Config = "Development",
   [ValidateSet("ASTC","Multi","ETC2")][string]$CookFlavor = "ASTC",
   [string]$DeviceId = "",
+  [switch]$SkipCook,
   [switch]$AppBundle,
   [switch]$Deploy
 )
@@ -25,6 +26,8 @@ if (-not $env:JAVA_HOME -or !(Test-Path $env:JAVA_HOME)) {
   $jdk = Get-ChildItem "C:\Program Files\Microsoft\jdk-17*" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($jdk) { $env:JAVA_HOME = $jdk.FullName }
 }
+# Use Windows native OS root certificate store so Gradle wrapper & Maven HTTPS verify cleanly
+$env:JAVA_TOOL_OPTIONS = "-Djavax.net.ssl.trustStoreType=Windows-ROOT -Djavax.net.ssl.trustStore=NONE"
 Write-Host "ANDROID_HOME=$env:ANDROID_HOME" -ForegroundColor DarkGray
 Write-Host "NDKROOT=$env:NDKROOT" -ForegroundColor DarkGray
 Write-Host "JAVA_HOME=$env:JAVA_HOME" -ForegroundColor DarkGray
@@ -52,13 +55,13 @@ $uatArgs = @(
   "-platform=Android",
   "-clientconfig=$Config",
   "-serverconfig=$Config",
-  "-cook",
+  $(if ($SkipCook) { "-skipcook" } else { "-cook" }),
   "-cookflavor=$CookFlavor",
   "-stage",
   "-pak",
   "-archive",
   "-archivedirectory=`"$OutDir`"",
-  "-build",
+  $(if ($SkipCook) { "-skipbuild" } else { "-build" }),
   "-skipbuildeditor",
   "-package",
   "-utf8output"
