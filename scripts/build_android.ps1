@@ -59,6 +59,7 @@ $uatArgs = @(
   "-archive",
   "-archivedirectory=`"$OutDir`"",
   "-build",
+  "-skipbuildeditor",
   "-package",
   "-utf8output"
 )
