@@ -160,16 +160,28 @@ class CharacterBuilder {
     for (const [x, y, z] of this.verts) lines.push(`v ${x.toFixed(2)} ${y.toFixed(2)} ${z.toFixed(2)}`);
     for (const [u, v] of this.uvs) lines.push(`vt ${u.toFixed(4)} ${v.toFixed(4)}`);
     let tris = 0;
+    let skipped = 0;
+    // Positions as written (2 decimals), so the zero-area test matches what importers see
+    const P = this.verts.map(([x, y, z]) => [+x.toFixed(2), +y.toFixed(2), +z.toFixed(2)]);
+    const isDegenerate = (a, b, c) => {
+      const [ax, ay, az] = P[a - 1], [bx, by, bz] = P[b - 1], [cx, cy, cz] = P[c - 1];
+      const ux = bx - ax, uy = by - ay, uz = bz - az;
+      const vx = cx - ax, vy = cy - ay, vz = cz - az;
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      return nx * nx + ny * ny + nz * nz < 1e-8;
+    };
     for (const [mat, faces] of Object.entries(this.groups)) {
       lines.push(`g ${mat}`);
       lines.push(`usemtl ${mat}`);
       for (const [a, b, c] of faces) {
+        // Skip zero-area slivers (e.g. at the closed poles of rounded shapes)
+        if (isDegenerate(a, b, c)) { skipped++; continue; }
         lines.push(`f ${a}/${a} ${b}/${b} ${c}/${c}`);
         tris++;
       }
     }
     fs.writeFileSync(path.join(OUT_DIR, `${name}.obj`), lines.join('\n') + '\n');
-    console.log(`  HD ${name}.obj (${this.verts.length} verts, ${tris} tris, mats: ${Object.keys(this.groups).join(', ')})`);
+    console.log(`  HD ${name}.obj (${this.verts.length} verts, ${tris} tris, ${skipped} zero-area skipped, mats: ${Object.keys(this.groups).join(', ')})`);
   }
 }
 
