@@ -1,0 +1,28 @@
+# Git LFS for Unreal Engine binary assets.
+# Run `git lfs install` once on each machine before committing ue5/Content.
+# Scoped to ue5/ so the existing assets_3d/ files and the web game are unchanged.
+
+# Unreal packages and maps (all folders)
+*.uasset filter=lfs diff=lfs merge=lfs -text
+*.umap   filter=lfs diff=lfs merge=lfs -text
+
+# Source art and audio imported into the Unreal project
+ue5/**/*.png  filter=lfs diff=lfs merge=lfs -text
+ue5/**/*.jpg  filter=lfs diff=lfs merge=lfs -text
+ue5/**/*.tga  filter=lfs diff=lfs merge=lfs -text
+ue5/**/*.exr  filter=lfs diff=lfs merge=lfs -text
+ue5/**/*.psd  filter=lfs diff=lfs merge=lfs -text
+ue5/**/*.fbx  filter=lfs diff=lfs merge=lfs -text
+ue5/**/*.obj  filter=lfs diff=lfs merge=lfs -text
+ue5/**/*.wav  filter=lfs diff=lfs merge=lfs -text
+ue5/**/*.ogg  filter=lfs diff=lfs merge=lfs -text
+ue5/**/*.mp4  filter=lfs diff=lfs merge=lfs -text
+ue5/**/*.ttf  filter=lfs diff=lfs merge=lfs -text
+ue5/**/*.otf  filter=lfs diff=lfs merge=lfs -text
+
+# Keep text sources diffable
+*.cpp text
+*.h   text
+*.cs  text
+*.ini text
+*.uproject text
