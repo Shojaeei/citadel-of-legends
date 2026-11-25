@@ -5,6 +5,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "CitadelRTSLibrary.generated.h"
 
+class AActor;
 class APlayerController;
 
 USTRUCT(BlueprintType)
@@ -35,8 +36,8 @@ struct FCitadelCombatResult
 };
 
 /**
- * High-performance C++ tactical helpers for Stronghold-style RTS gameplay:
- * - Disciplined rank-and-file military formations (melee vanguard + ranged backline)
+ * C++ tactical helpers for Citadel of Legends castle and siege gameplay:
+ * - Rank-and-file formations (melee vanguard + ranged backline behind it)
  * - Marquee screen-space drag-box unit selection (desktop & mobile)
  * - High-ground archer elevation bonus & siege anti-fortification damage
  * - Multi-lane river crossing raid routing (North Ford, Central Bridge, South Bridge)
@@ -48,7 +49,20 @@ class XENON_API UCitadelRTSLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
-	/** Computes a disciplined military rank-and-file slot around Destination facing MarchDir. */
+	/** Number of soldiers per rank for a group of TotalUnits (3 to 6). */
+	UFUNCTION(BlueprintPure, Category = "Citadel|Formation")
+	static int32 GetFormationColumns(int32 TotalUnits);
+
+	/** Number of ranks (rows) a group of TotalUnits occupies. Pass the melee group's result to ComputeFormationSlot for ranged units. */
+	UFUNCTION(BlueprintPure, Category = "Citadel|Formation")
+	static int32 GetFormationRankCount(int32 TotalUnits);
+
+	/**
+	 * Computes a rank-and-file slot around Destination facing MarchDirection.
+	 * UnitIndex and TotalUnits are counted within the unit's own group (melee or ranged).
+	 * For ranged units, MeleeRankCount is the number of melee ranks in front of them
+	 * (GetFormationRankCount(MeleeTotal)), so the ranged block always starts behind the last melee rank.
+	 */
 	UFUNCTION(BlueprintPure, Category = "Citadel|Formation")
 	static FCitadelFormationSlot ComputeFormationSlot(
 		const FVector& Destination,
@@ -56,7 +70,8 @@ public:
 		int32 UnitIndex,
 		int32 TotalUnits,
 		bool bIsRanged,
-		float UnitSpacing = 145.0f);
+		float UnitSpacing = 145.0f,
+		int32 MeleeRankCount = 2);
 
 	/** Selects all actors matching TeamTag whose projected screen positions fall inside [BoxMin, BoxMax]. */
 	UFUNCTION(BlueprintCallable, Category = "Citadel|Selection", meta = (WorldContext = "WorldContextObject"))
@@ -68,9 +83,9 @@ public:
 		FName RequiredUnitTag = FName(TEXT("Unit")),
 		FName RequiredTeamTag = FName(TEXT("Team_Player")));
 
-	/** Stronghold-style combat damage: +35% ranged high-ground bonus, 3.0x siege damage vs buildings. */
+	/** Siege combat damage: +35% ranged high-ground bonus, 3.0x siege damage vs buildings. */
 	UFUNCTION(BlueprintPure, Category = "Citadel|Combat")
-	static FCitadelCombatResult ComputeStrongholdDamage(
+	static FCitadelCombatResult ComputeSiegeDamage(
 		float BaseDamage,
 		float AttackerZ,
 		float DefenderZ,

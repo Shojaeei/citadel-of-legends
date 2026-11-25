@@ -1,9 +1,25 @@
 // Citadel of Legends — Core C++ RTS Tactical Gameplay Library
 #include "CitadelRTSLibrary.h"
-#include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+
+int32 UCitadelRTSLibrary::GetFormationColumns(int32 TotalUnits)
+{
+	const int32 SafeTotal = FMath::Max(1, TotalUnits);
+	// 3 to 6 soldiers per rank depending on group size
+	return FMath::Clamp(FMath::CeilToInt(FMath::Sqrt(static_cast<float>(SafeTotal)) * 1.4f), 3, 6);
+}
+
+int32 UCitadelRTSLibrary::GetFormationRankCount(int32 TotalUnits)
+{
+	if (TotalUnits <= 0)
+	{
+		return 0;
+	}
+	const int32 Columns = GetFormationColumns(TotalUnits);
+	return (TotalUnits + Columns - 1) / Columns;
+}
 
 FCitadelFormationSlot UCitadelRTSLibrary::ComputeFormationSlot(
 	const FVector& Destination,
@@ -11,7 +27,8 @@ FCitadelFormationSlot UCitadelRTSLibrary::ComputeFormationSlot(
 	int32 UnitIndex,
 	int32 TotalUnits,
 	bool bIsRanged,
-	float UnitSpacing)
+	float UnitSpacing,
+	int32 MeleeRankCount)
 {
 	FCitadelFormationSlot Slot;
 	const int32 SafeTotal = FMath::Max(1, TotalUnits);
@@ -24,15 +41,16 @@ FCitadelFormationSlot UCitadelRTSLibrary::ComputeFormationSlot(
 	}
 	const FVector Right(-Forward.Y, Forward.X, 0.0f);
 
-	// 4 to 6 soldiers wide depending on army size
-	const int32 Columns = FMath::Clamp(FMath::CeilToInt(FMath::Sqrt(static_cast<float>(SafeTotal)) * 1.4f), 3, 6);
+	const int32 Columns = GetFormationColumns(SafeTotal);
 	const int32 Row = SafeIndex / Columns;
 	const int32 Col = SafeIndex % Columns;
 	const int32 RowCount = FMath::Min(Columns, SafeTotal - Row * Columns);
 
 	const float LateralOffset = (static_cast<float>(Col) - 0.5f * static_cast<float>(RowCount - 1)) * UnitSpacing;
-	// Ranged troops hold behind melee vanguard ranks
-	const float DepthRank = static_cast<float>(Row) + (bIsRanged ? 1.5f : -0.5f);
+	// Melee ranks start half a spacing ahead of Destination and step back one spacing per rank.
+	// Ranged ranks start directly behind the last melee rank, however many melee ranks there are.
+	const float RankOffset = bIsRanged ? static_cast<float>(FMath::Max(0, MeleeRankCount)) : 0.0f;
+	const float DepthRank = static_cast<float>(Row) + RankOffset - 0.5f;
 	const float ForwardOffset = -DepthRank * UnitSpacing;
 
 	Slot.WorldLocation = Destination + Right * LateralOffset + Forward * ForwardOffset;
@@ -55,19 +73,13 @@ TArray<AActor*> UCitadelRTSLibrary::SelectUnitsInScreenBox(
 		return Selected;
 	}
 
-	UWorld* World = GEngine ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull) : nullptr;
-	if (!World)
-	{
-		return Selected;
-	}
-
 	const float MinX = FMath::Min(ScreenStart.X, ScreenEnd.X);
 	const float MaxX = FMath::Max(ScreenStart.X, ScreenEnd.X);
 	const float MinY = FMath::Min(ScreenStart.Y, ScreenEnd.Y);
 	const float MaxY = FMath::Max(ScreenStart.Y, ScreenEnd.Y);
 
 	TArray<AActor*> Candidates;
-	UGameplayStatics::GetAllActorsWithTag(World, RequiredUnitTag, Candidates);
+	UGameplayStatics::GetAllActorsWithTag(WorldContextObject, RequiredUnitTag, Candidates);
 
 	for (AActor* Actor : Candidates)
 	{
@@ -93,7 +105,7 @@ TArray<AActor*> UCitadelRTSLibrary::SelectUnitsInScreenBox(
 	return Selected;
 }
 
-FCitadelCombatResult UCitadelRTSLibrary::ComputeStrongholdDamage(
+FCitadelCombatResult UCitadelRTSLibrary::ComputeSiegeDamage(
 	float BaseDamage,
 	float AttackerZ,
 	float DefenderZ,
@@ -104,21 +116,22 @@ FCitadelCombatResult UCitadelRTSLibrary::ComputeStrongholdDamage(
 	FCitadelCombatResult Result;
 	float Multiplier = 1.0f;
 
-	// Stronghold rule: elevated archers / tower defenders gain +35% damage
+	// Elevated archers / tower defenders gain +35% damage
 	if (bIsRanged && (AttackerZ - DefenderZ) >= 75.0f)
 	{
 		Multiplier *= 1.35f;
 		Result.bHighGroundBonus = true;
 	}
 
-	// Stronghold rule: siege engines crush masonry walls & keeps (3.0x vs buildings)
+	// Siege engines deal 3.0x damage to walls and buildings
 	if (bIsSiege && bTargetIsBuilding)
 	{
 		Multiplier *= 3.0f;
 		Result.bSiegeBonus = true;
 	}
 
-	Result.FinalDamage = FMath::Max(1.0f, BaseDamage * Multiplier);
+	// Any positive hit deals at least 1 damage; zero or negative base damage stays at 0
+	Result.FinalDamage = BaseDamage > 0.0f ? FMath::Max(1.0f, BaseDamage * Multiplier) : 0.0f;
 	return Result;
 }
 
