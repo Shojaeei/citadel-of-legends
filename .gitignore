@@ -27,3 +27,16 @@ desktop/app/
 desktop/release/
 dist-ci/
 supporter_codes*.csv
+
+# Unreal Engine (ue5/) generated folders - never commit these
+ue5/Binaries/
+ue5/Intermediate/
+ue5/Saved/
+ue5/DerivedDataCache/
+ue5/Plugins/*/Binaries/
+ue5/Plugins/*/Intermediate/
+ue5/.vs/
+ue5/*.sln
+ue5/*.VC.db
+ue5/*.VC.opendb
+ue5/.vsconfig
